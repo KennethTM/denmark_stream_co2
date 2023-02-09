@@ -1,0 +1,16 @@
+library(data.table);library(tidyverse);library(AquaEnv);library(sf);
+library(lubridate);library(patchwork);library(terra);library(lwgeom);
+library(exactextractr);library(nngeo)
+
+#Aq. Sci.:For most journals the figures should be 39 mm, 84 mm, 129 mm, or 174 mm wide and not higher than 234 mm.
+theme_pub <- theme_bw() + 
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        axis.text = element_text(colour = "black"), 
+        strip.background = element_rect(fill = "white"))
+theme_set(theme_pub)
+
+dk_epsg <- 25832
+
+mpi_settings <- "mpiexec -n 8 "
+taudem_path <- "/home/kenneth/TauDEM-Develop/src/build/"
