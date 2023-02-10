@@ -13,4 +13,4 @@ theme_set(theme_pub)
 dk_epsg <- 25832
 
 mpi_settings <- "mpiexec -n 8 "
-taudem_path <- "/home/kenneth/TauDEM-Develop/src/build/"
+taudem_path <- "/home/kenneth/TauDEM-more-mpi-deprecations/src/build/"

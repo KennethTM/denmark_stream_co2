@@ -51,30 +51,30 @@ system(taudem_acc)
 #Threshold stream network
 taudem_threshold <- paste0(mpi_settings, taudem_path, "threshold",
                            " -src ", "rawdata/dhym_10m_breach_src.tif",
-                           " -ssa ", "rawdata/dhym_10m_breach_ad8.tif",
+                           " -ssa ", "/media/kenneth/d6c13395-8492-49ee-9c0f-6a165e34c95c1/co2_lowland_streams/data/dhym_10m_breach_ad8.tif",
                            " -thresh 1000")
 system(taudem_threshold)
 
 #Snap points to stream network along flow directions
 taudem_snap <- paste0(taudem_path, "moveoutletstostrm",
-                      " -p ", "rawdata/dhym_10m_breach_p.tif",
+                      " -p ", "/media/kenneth/d6c13395-8492-49ee-9c0f-6a165e34c95c1/co2_lowland_streams/data/dhym_10m_breach_p.tif",
                       " -src ", "rawdata/dhym_10m_breach_src.tif",
+                      " -md 100",
                       " -o ", "rawdata/DK_mh_2020_100m_QPoints.shp",
                       " -om ", "rawdata/qpoints_snap.shp")
 system(taudem_snap)
 
+stream_sites_snap <- st_read("rawdata/qpoints_snap.shp") #add column "id"
 
-#Test om det er nødvendigt at seede med stream start points??
-
-
-
-stream_sites_snap <- st_read("rawdata/qpoints_snap.shp")
+stream_sites_snap |> 
+  filter(Dist_moved >= 0) |> 
+  mapview::mapview()
 
 #NESTED WATERSHED DELINEATION
 #Delineate watershed draining to stream outlets
 taudem_gage <- paste0(mpi_settings, taudem_path, "gagewatershed",
-                      " -p ", "rawdata/dhym_10m_breach_p.tif",
-                      " -o ", "rawdata/DK_mh_2020_100m_QPoints.shp",
+                      " -p ", "/media/kenneth/d6c13395-8492-49ee-9c0f-6a165e34c95c1/co2_lowland_streams/data/dhym_10m_breach_p.tif",
+                      " -o ", "rawdata/qpoints_snap.shp",
                       " -gw ", "rawdata/dhym_watersheds.tif",
                       " -id ", "rawdata/dhym_watersheds.txt")
 system(taudem_gage)
@@ -88,15 +88,51 @@ system(polygonize)
 
 #Clean polygons
 gw_clean <- st_read("rawdata/dhym_watersheds.sqlite") %>% 
-  st_transform(dk_epsg) %>% 
   st_make_valid() %>% 
-  group_by(dn) %>% 
-  summarise() %>% 
-  st_cast("MULTIPOLYGON") %>% 
-  st_remove_holes() %>% 
-  rename(id = dn) %>% 
-  st_join(stream_sites_snap) %>% 
-  mutate(nested_area = as.numeric(st_area(geometry)))
+  #group_by(dn) %>% 
+  #summarise() %>% 
+  #st_cast("MULTIPOLYGON") %>% 
+  #st_remove_holes() %>% 
+  rename(id = dn) #%>% 
+  #st_join(stream_sites_snap) %>% 
+  #mutate(nested_area = as.numeric(st_area(geometry)))
+
+conn <- read.table("rawdata/dhym_watersheds.txt", header = TRUE)
+
+test <- gw_clean[1:10, ]
+
+idx_list <- list()
+
+for(i in 1:nrow(test)){
+  watershed_id <- test[i, ]$id
+  
+  next_id <- watershed_id
+  id_list <- c()
+  
+  while(next_id != -1){
+    next_id <- conn[conn$id == next_id, ]$iddown
+    id_list <- c(id_list, next_id)
+    
+  }
+  
+  watershed_id_chr <- as.character(watershed_id)
+  
+  id_list[id_list == -1] <- watershed_id
+  
+  idx_list[[watershed_id_chr]] <- id_list
+  
+}
+
+gw_unioned <- lapply(idx_list, function(idxs){
+  gw_clean[gw_clean$id %in% idxs, ] |> 
+    st_union()
+})
+
+test_2 <- st_set_geometry(test, do.call(rbind, gw_unioned) |> st_sfc(crs=dk_epsg))
+
+#compare qpoints og catchments
+
+
 
 #Calculate total non-overlapping area covered by catchments
 st_write(gw_clean, "data/qpoint_watersheds.sqlite", delete_dsn = TRUE)
