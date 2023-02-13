@@ -1,10 +1,10 @@
 source("libs_and_funcs.R")
 
 #Process and merge rawdata of chemistry and field observations in streams
-chem_raw <- read.csv2("rawdata/stream_chem.csv")
+chem_raw <- read.csv2("rawdata/stream_data/stream_chem.csv")
 chem <- data.table(chem_raw)
 
-field_raw <- read.csv2("rawdata/stream_field.csv")
+field_raw <- read.csv2("rawdata/stream_data/stream_field.csv")
 field <- data.table(field_raw)
 
 chem_clean <- chem[,.(site_id = ObservationsStedNr, site_name = ObservationsStedNavn,

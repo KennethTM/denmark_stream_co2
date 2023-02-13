@@ -5,12 +5,22 @@ dk_mod <- st_read("rawdata/dk_model_hip_2020.shp")
 dk_mod_comb <- dk_mod |> 
   st_combine()
 
+dk_lakes <- st_read("/media/kenneth/d6c13395-8492-49ee-9c0f-6a165e34c95c1/autoencoder-for-lake-bathymetry/rawdata/DK_StandingWater.gml") |> 
+  select(gml_id) |> 
+  st_transform(dk_epsg)
+
 q_points <- st_read("rawdata/DK_mh_2020_100m_QPoints.shp")
 
-q_df <- q_points |> 
+q_points_id <- q_points |> 
   bind_cols(data.frame(st_coordinates(q_points))) |> 
-  st_drop_geometry() |> 
-  rename(q_point_x = X, q_point_y = Y)
+  rename(q_point_x = X, q_point_y = Y) |> 
+  mutate(id = 1:n(),
+         lake = lengths(st_intersects(q_points_id, dk_lakes)))
+
+st_write(q_points_id, "rawdata/q_points_id.sqlite")
+
+q_df <- q_points_id |> 
+  st_drop_geometry()
 
 co2_data <- st_read("data/co2_data.sqlite")
 
@@ -25,6 +35,21 @@ co2_data <- st_read("data/co2_data.sqlite")
 # co2_data_snapped$snap_distance <- as.numeric(st_distance(co2_data, co2_data_snapped, by_element = TRUE))
 # 
 # st_write(co2_data_snapped, "data/co2_data_snap.sqlite", delete_dsn=TRUE)
+
+# #Read VP2 stream network
+# vp2 <- st_read("rawdata/vp2.shp")
+# 
+# vp2_start <- vp2 |> 
+#   st_cast("LINESTRING") |> 
+#   st_startpoint()
+# 
+# dhym_10m <- rast("rawdata/dhym_10m_crop_breach.tif")
+# 
+# vp2_start_rast <- rasterize(vect(vp2_start), rast(dhym_10m), 
+#                             background=0, field = 1)
+# 
+# writeRaster(vp2_start_rast, "rawdata/vp2_start.tif", datatype="INT1U")
+
 
 #Join co2 data with nearest q point
 nearest_q_point <- st_nearest_feature(co2_data, q_points)
