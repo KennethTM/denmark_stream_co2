@@ -11,13 +11,12 @@ dk_lakes <- st_read("/media/kenneth/d6c13395-8492-49ee-9c0f-6a165e34c95c1/autoen
 
 q_points <- st_read("rawdata/DK_mh_2020_100m_QPoints.shp")
 
-q_points_id <- q_points |> 
+q_points_lake <- q_points |> 
   bind_cols(data.frame(st_coordinates(q_points))) |> 
   rename(q_point_x = X, q_point_y = Y) |> 
-  mutate(id = 1:n(),
-         lake = lengths(st_intersects(q_points_id, dk_lakes)))
+  mutate(within_lake = lengths(st_intersects(q_points, dk_lakes)))
 
-st_write(q_points_id, "rawdata/q_points_id.sqlite")
+st_write(q_points_lake, "rawdata/q_points.sqlite")
 
 q_df <- q_points_id |> 
   st_drop_geometry()

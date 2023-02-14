@@ -16,32 +16,33 @@ taudem_acc <- paste0(mpi_settings, taudem_path, "aread8",
                      " -nc")
 system(taudem_acc)
 
-####
-
 #Threshold stream network
 taudem_threshold <- paste0(mpi_settings, taudem_path, "threshold",
                            " -src ", "rawdata/dhym_20m_src.tif",
-                           " -ssa ", "dhym_20m_ad8.tif",
-                           " -thresh 1000")
+                           " -ssa ", "rawdata/dhym_20m_ad8.tif",
+                           " -thresh 1250")
 system(taudem_threshold)
 
 #Snap q_points to nearest src raster cell before watershed delineation
 src <- rast("rawdata/dhym_20m_src.tif")
 src[src == 0] <- NA
-src_df <- as.data.frame(src, na.rm=TRUE, xy=TRUE)
+
+src_df <- as.data.frame(src, na.rm=TRUE, xy=TRUE) |> 
+  rownames_to_column(var = "src_idx")
 
 #Snap qpoints to nearest stream cell
-q_points <- st_read("rawdata/q_points_id.sqlite")
+q_points <- st_read("rawdata/q_points.sqlite")
 
-src_vect <- st_as_sf(src_df, coords=c("x", "y"), crs=dk_epsg)
+src_vect <- st_as_sf(src_df, coords=c("x", "y"), crs=dk_epsg) 
 
 nearest_src <- st_nearest_feature(q_points, src_vect)
 
 q_point_snap <- bind_cols(st_drop_geometry(q_points), src_df[nearest_src, ])
 
 q_point_snap |> 
+  mutate(id = as.numeric(factor(src_idx))) |> 
   st_as_sf(coords=c("x", "y"), crs=dk_epsg) |> 
-  st_write("rawdata/qpoints_snap.shp")
+  st_write("rawdata/q_points_snap.sqlite", delete_dsn=TRUE)
 
 # #Snap points to stream network along flow directions
 # taudem_snap <- paste0(taudem_path, "moveoutletstostrm",
@@ -51,92 +52,87 @@ q_point_snap |>
 #                       " -o ", "rawdata/DK_mh_2020_100m_QPoints.shp",
 #                       " -om ", "rawdata/qpoints_snap.shp")
 # system(taudem_snap)
-
-stream_sites_snap |> 
-  filter(Dist_moved >= 0) |> 
-  mapview::mapview()
+#
+# stream_sites_snap |> 
+#   filter(Dist_moved >= 0) |> 
+#   mapview::mapview()
 
 #Delineate watershed draining to stream outlets
 taudem_gage <- paste0(mpi_settings, taudem_path, "gagewatershed",
                       " -p ", "rawdata/dhym_20m_p.tif",
-                      " -o ", "rawdata/qpoints_snap.shp",
+                      " -o ", "rawdata/q_points_snap.sqlite",
                       " -gw ", "rawdata/dhym_watersheds.tif",
                       " -id ", "rawdata/dhym_watersheds.txt")
 system(taudem_gage)
 
-#as.polygons
+# #Raster to polygon
+# polygonize <- paste0("pkpolygonize ",
+#                      " -i ", "rawdata/dhym_watersheds.tif",
+#                      " -m ", "rawdata/dhym_watersheds.tif",
+#                      " -o ", "rawdata/dhym_watersheds.sqlite")
+# system(polygonize)
 
-#Raster to polygon
-polygonize <- paste0("pkpolygonize ",
-                     " -i ", "rawdata/dhym_watersheds.tif",
-                     " -m ", "rawdata/dhym_watersheds.tif",
-                     " -o ", "rawdata/dhym_watersheds.sqlite")
-system(polygonize)
+# #Clean polygons
+# gw_clean <- st_read("rawdata/dhym_watersheds.sqlite") %>% 
+#   st_make_valid() %>% 
+#   group_by(dn) %>% 
+#   summarise() %>% 
+#   st_cast("MULTIPOLYGON") %>% 
+#   st_remove_holes() %>% 
+#   rename(id = dn)
+# 
+# st_write(gw_clean, "rawdata/dhym_watersheds_clean.sqlite")
 
-#Clean polygons
-gw_clean <- st_read("rawdata/dhym_watersheds.sqlite") %>% 
-  st_make_valid() %>% 
-  #group_by(dn) %>% 
-  #summarise() %>% 
-  #st_cast("MULTIPOLYGON") %>% 
-  #st_remove_holes() %>% 
-  rename(id = dn) #%>% 
-  #st_join(stream_sites_snap) %>% 
-  #mutate(nested_area = as.numeric(st_area(geometry)))
+watersheds <- rast("rawdata/dhym_watersheds.tif")
 
+watersheds_vec <- as.polygons(watersheds) |> 
+  st_as_sf() |> 
+  rename(id = dhym_watersheds) |> 
+  st_cast("MULTIPOLYGON")
+
+#Resolve watershed connectivity
 conn <- read.table("rawdata/dhym_watersheds.txt", header = TRUE)
 
-
-upstream <- function(id){
+upstream_watersheds <- function(id){
   
-  id_list <- c()
+  all_ids <- c(id)
+  current_ids <- c(id)
   upstream_exist <- TRUE
   
   while(upstream_exist){
-    ids_up <- conn[conn$iddown == id, ]$id
     
-    if(length(ids_up) == 0){
+    upstream_ids <- conn[conn$iddown %in% current_ids, ]$id
+    
+    if(length(upstream_ids) == 0){
       upstream_exist <- FALSE
     }else{
-      id_list <- c(id_list, ids_up)
+      all_ids <- c(all_ids, upstream_ids)
+      current_ids <- upstream_ids
     }
     
   }
   
-  return(id_list)
+  return(all_ids)
   
 }
 
+conn_list <- lapply(watersheds_vec$id, upstream_watersheds)
 
-test <- gw_clean[1:10, ]
-
-idx_list <- list()
-
-for(i in 1:nrow(test)){
-  watershed_id <- test[i, ]$id
+union_list <- lapply(conn_list, function(x){
+  union_vec <- watersheds_vec |>
+    filter(id %in% x) |> 
+    st_union() |> 
+    st_cast("MULTIPOLYGON")
   
-  next_id <- watershed_id
-  id_list <- c()
-  
-  while(next_id != -1){
-    next_id <- conn[conn$id == next_id, ]$iddown
-    id_list <- c(id_list, next_id)
-    
-  }
-  
-  watershed_id_chr <- as.character(watershed_id)
-  
-  id_list[id_list == -1] <- watershed_id
-  
-  idx_list[[watershed_id_chr]] <- id_list
-  
-}
-
-gw_unioned <- lapply(idx_list, function(idxs){
-  gw_clean[gw_clean$id %in% idxs, ] |> 
-    st_union()
+  return(st_sf(id = x[1], geometry=union_vec))
 })
 
-test_2 <- st_set_geometry(test, do.call(rbind, gw_unioned) |> st_sfc(crs=dk_epsg))
+watershed_union <- union_list |> 
+  rbindlist() |> 
+  st_as_sf()
 
-#compare qpoints og catchments
+st_write(watershed_union, "rawdata/q_points_watersheds.sqlite")
+
+# #Use mapshaper cmd line functions to simplify polygons
+# simplify_cmd <- paste("mapshaper-xl 16gb", "rawdata/q_points_watersheds.shp", "-simplify", "10%", "keep-shapes", "-o", "rawdata/q_points_watersheds_simple.shp")
+# system(simplify_cmd)
