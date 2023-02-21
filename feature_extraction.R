@@ -24,67 +24,47 @@ clay_slope_vals <- exact_extract(clay_slope, catchments, "mean", max_cells_in_me
 
 df_vals <- cbind("mean.phraetic" = phraetic_vals$mean, "mean.chalk" = chalk_vals$mean, clay_slope_vals)
 
-#Write to file
-saveRDS(df_vals, "rawdata/static_features.rds")
+#Write to file 
+saveRDS(df_vals, "rawdata/static_features.rds") #WRITE TO PARQUET FILE
 
 #Join air temperature data and catchments
-dk_ta <- read_ncdf("rawdata/features/DK_Ta_20km_1989-2023.nc") |> 
-  st_as_sf(as_points = TRUE, long=TRUE) |> 
-  st_set_crs(25832)
+all_ta <- rbind(ncdf_to_dt("rawdata/features/DK_Ta_20km_1989-2023.nc"), 
+                ncdf_to_dt("rawdata/features/BH_Ta_20km_1989-2023.nc"))
+all_ta <- all_ta[, Ta := as.numeric(Ta)][, time := as.Date(time)]
+setkeyv(all_ta, c("X", "Y"))
 
-bh_ta <- read_ncdf("rawdata/features/BH_Ta_20km_1989-2023.nc") |> 
-  st_as_sf(as_points = TRUE, long=TRUE) |> 
-  st_set_crs(25832)
-
-all_ta <- rbind(dk_ta, bh_ta)
-
-all_ta_dt <- cbind(time = all_ta$time, airt = as.numeric(all_ta$Ta), data.frame(st_coordinates(all_ta))) |> 
+all_ta_ids <- all_ta[time == as.Date("1989-01-02"), ] |> 
+  as.data.frame() |> 
+  st_as_sf(coords=c("X", "Y"), crs=25832) |> 
+  select(-time, -Ta) |> 
+  st_join(catchments, left=FALSE) |> 
+  coords_to_col() |> 
   data.table()
-setkeyv(all_ta_dt, c("X", "Y"))
+setkeyv(all_ta_ids, c("X", "Y"))
 
-grid_ta <- all_ta |> 
-  filter(time == as_date("2000-01-01"))
+catchment_ta_aggr <- merge(all_ta, all_ta_ids, allow.cartesian=TRUE)[, .(mean.airt = mean(Ta)), by= .(id, time)]
 
-grid_ta_ids <- st_join(grid_ta, catchments, left=FALSE)
-
-grid_ta_ids_dt <- cbind(id = grid_ta_ids$id, data.frame(st_coordinates(grid_ta_ids))) |> 
-  data.table()
-setkeyv(grid_ta_ids_dt, c("X", "Y"))
-
-catchment_ta <- merge(all_ta_dt, grid_ta_ids_dt, allow.cartesian=TRUE) #all_ta_dt[grid_ids_dt, allow.cartesian=TRUE]
-
-catchment_ta_aggr <- catchment_ta[, .(mean.airt = mean(airt)), by= .(id, time)]
-
-saveRDS(as.data.frame(catchment_ta_aggr), "rawdata/clim_features_airt.rds")
+catchment_ta_aggr |> 
+  as.data.frame() |> 
+  write_parquet("rawdata/climate_airt.parquet")
 
 #Join precipitation data and catchments
-dk_prec <- read_ncdf("rawdata/features/DK_DMI_Corr_Precip_10km_1989-2023.nc") |> 
-  st_as_sf(as_points = TRUE, long=TRUE) |> 
-  st_set_crs(25832)
+all_prec <- rbind(ncdf_to_dt("rawdata/features/DK_DMI_Corr_Precip_10km_1989-2023.nc"), 
+                  ncdf_to_dt("rawdata/features/BH_DMI_Corr_Precip_10km_1989-2023.nc"))
+all_prec <- all_prec[, P.DMI.corr := as.numeric(P.DMI.corr)][, time := as.Date(time)]
+setkeyv(all_prec, c("X", "Y"))
 
-bh_prec <- read_ncdf("rawdata/features/BH_DMI_Corr_Precip_10km_1989-2023.nc") |> 
-  st_as_sf(as_points = TRUE, long=TRUE) |> 
-  st_set_crs(25832)
-
-all_prec <- rbind(dk_prec, bh_prec) |> 
-  rename(precip = P.DMI.corr) |> 
-  mutate(time = as.Date(time))
-
-all_prec_dt <- cbind(time = all_prec$time, precip = as.numeric(all_prec$precip), data.frame(st_coordinates(all_prec))) |> 
+all_prec_ids <- all_prec[time == as.Date("1989-01-02"), ] |> 
+  as.data.frame() |> 
+  st_as_sf(coords=c("X", "Y"), crs=25832) |> 
+  select(-time, -P.DMI.corr) |> 
+  st_join(catchments, left=FALSE) |> 
+  coords_to_col() |> 
   data.table()
-setkeyv(all_prec_dt, c("X", "Y"))
+setkeyv(all_prec_ids, c("X", "Y"))
 
-grid_prec <- all_prec |> 
-  filter(time == as_date("2000-01-01"))
+catchment_prec_aggr <- merge(all_prec, all_prec_ids, allow.cartesian=TRUE)[, .(mean.precip = mean(P.DMI.corr)), by= .(id, time)]
 
-grid_prec_ids <- st_join(grid_prec, catchments, left=FALSE)
-
-grid_prec_ids_dt <- cbind(id = grid_prec_ids$id, data.frame(st_coordinates(grid_prec_ids))) |> 
-  data.table()
-setkeyv(grid_prec_ids_dt, c("X", "Y"))
-
-catchment_prec <- merge(all_prec_dt, grid_prec_ids_dt, allow.cartesian=TRUE)
-
-catchment_prec_aggr <- catchment_prec[, .(mean.precip = mean(precip)), by= .(id, time)]
-
-saveRDS(as.data.frame(catchment_prec_aggr), "rawdata/clim_features_prec.rds")
+catchment_prec_aggr |> 
+  as.data.frame() |> 
+  write_parquet("rawdata/climate_precip.parquet")
