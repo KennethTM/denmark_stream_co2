@@ -13,12 +13,16 @@ slp_files <- "rawdata/features/slpdeg.tif"
 chalk_file <- "rawdata/features/chalkdepth_DKM.tif"
 phraetic_file <- "rawdata/features/dkm_2020_100m_phreatic_all_mean.tif"
 
+dem_file <- "/media/kenneth/d6c13395-8492-49ee-9c0f-6a165e34c95c1/watershed_diversity/data_raw/dhym_10m.tif"
+
 #Load rasters
 clay_slope <- rast(c(clay_files, slp_files))
 chalk <- rast(chalk_file)
 phraetic <- rast(phraetic_file)
+dem <- rast(dem_file)
 
 #Extract values
+dem_vals <- exact_extract(dem, catchments, "mean", max_cells_in_memory=1e+09)
 phraetic_vals <- exact_extract(phraetic, catchments, "mean")
 chalk_vals <- exact_extract(chalk, catchments, "mean")
 clay_slope_vals <- exact_extract(clay_slope, catchments, "mean", max_cells_in_memory=1e+09)
@@ -55,7 +59,9 @@ names(bsm_stack) <- names(var_codes)
 bsm_vals <- exact_extract(bsm_stack, catchments, "mean", max_cells_in_memory=1e+9)
 
 #Combine extracted feature values and write to file 
-df_vals <- cbind("mean.phraetic" = phraetic_vals, 
+df_vals <- cbind("id" = catchments$id,
+                 "mean.elev" = dem_vals,
+                 "mean.phraetic" = phraetic_vals, 
                  "mean.chalk" = chalk_vals, 
                  clay_slope_vals,
                  bsm_vals)
