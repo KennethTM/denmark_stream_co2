@@ -89,6 +89,15 @@ catchment_ta_aggr |>
   as.data.frame() |> 
   write_parquet("rawdata/climate_airt.parquet")
 
+#Calculate catchment area
+catchment_area <- catchments |> 
+  mutate(catchment_area = as.numeric(st_area(GEOMETRY))) |> 
+  st_drop_geometry()
+
+catchment_area |> 
+  as.data.frame() |> 
+  write_parquet("rawdata/catchment_area.parquet")
+
 #Join precipitation data and catchments
 all_prec <- rbind(ncdf_to_dt("rawdata/features/DK_DMI_Corr_Precip_10km_1989-2023.nc"), 
                   ncdf_to_dt("rawdata/features/BH_DMI_Corr_Precip_10km_1989-2023.nc"))

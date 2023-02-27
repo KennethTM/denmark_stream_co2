@@ -65,7 +65,7 @@ q_point_sf <- co2_data_q_point |>
 co2_data_q_point$snap_dist <- as.numeric(st_distance(co2_data_q_point, q_point_sf, by_element = TRUE))
 
 #Read dk model outputs
-dk_model_files <-  list.files("rawdata/dk_model_flow/", full.names = TRUE, pattern="*.csv")
+dk_model_files <- list.files("rawdata/dk_model_flow/", full.names = TRUE, pattern="*.csv")
 
 dk_model_list <- lapply(dk_model_files, function(x){
   

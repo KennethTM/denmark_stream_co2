@@ -37,3 +37,18 @@ gdalwarp(srcfile = "rawdata/dhym.vrt",
          tr = c(20, 20),
          multi = TRUE,
          wm = 8000)
+
+#Add lake attribute and 
+dk_lakes <- st_read("/media/kenneth/d6c13395-8492-49ee-9c0f-6a165e34c95c1/autoencoder-for-lake-bathymetry/rawdata/DK_StandingWater.gml") |> 
+  select(gml_id) |> 
+  st_transform(dk_epsg)
+
+q_points <- st_read("rawdata/DK_mh_2020_100m_QPoints.shp")
+
+q_points_lake <- q_points |> 
+  coords_to_col()
+  #bind_cols(data.frame(st_coordinates(q_points))) |> 
+  rename(q_point_x = X, q_point_y = Y) |> 
+  mutate(within_lake = lengths(st_intersects(q_points, dk_lakes)))
+
+st_write(q_points_lake, "rawdata/q_points.sqlite")

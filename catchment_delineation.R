@@ -3,7 +3,7 @@ source("libs_and_funcs.R")
 #https://hydrology.usu.edu/taudem/taudem5/TauDEM53CommandLineGuide.pdf
 
 #Flowdirs
-taudem_flowdir <- paste0(mpi_settings, taudem_path, "d8flowdir ",
+taudem_flowdir <- paste0(mpi_settings, taudem_path, "d8flowdir",
                          " -p ", "rawdata/dhym_20m_p.tif",
                          " -sd8 ", "rawdata/dhym_20m_sd8.tif",
                          " -fel ", "rawdata/dhym_breach_flats.tif")
@@ -20,7 +20,7 @@ system(taudem_acc)
 taudem_threshold <- paste0(mpi_settings, taudem_path, "threshold",
                            " -src ", "rawdata/dhym_20m_src.tif",
                            " -ssa ", "rawdata/dhym_20m_ad8.tif",
-                           " -thresh 1250")
+                           " -thresh 1250") #adjust thresholding??
 system(taudem_threshold)
 
 #Snap q_points to nearest src raster cell before watershed delineation
