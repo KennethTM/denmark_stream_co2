@@ -59,11 +59,11 @@ co2_q_point_dt <- co2_q_point |>
   mutate(date = ymd(date)) |> 
   data.table()
 
-co2_data_merge <- merge(co2_q_point_dt, dk_model_df, by=c("Name", "date"))
-co2_data_merge <- merge(co2_data_merge, airt, by=c("id", "date"))
-co2_data_merge <- merge(co2_data_merge, precip, by=c("id", "date"))
-co2_data_merge <- merge(co2_data_merge, static, by=c("id"))
-co2_data_merge <- merge(co2_data_merge, catchment_area, by=c("id"))
+co2_data_merge <- merge(co2_q_point_dt, dk_model_df, by=c("Name", "date"), all.x=TRUE)
+co2_data_merge <- merge(co2_data_merge, airt, by=c("id", "date"), all.x=TRUE)
+co2_data_merge <- merge(co2_data_merge, precip, by=c("id", "date"), all.x=TRUE)
+co2_data_merge <- merge(co2_data_merge, static, by=c("id"), all.x=TRUE)
+co2_data_merge <- merge(co2_data_merge, catchment_area, by=c("id"), all.x=TRUE)
 co2_data_merge <- co2_data_merge[, doy := yday(date)][, year := year(date)]
 
 #Write to file
