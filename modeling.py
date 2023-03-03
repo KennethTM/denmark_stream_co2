@@ -1,8 +1,12 @@
 import pandas as pd
 import numpy as np
-import sklearn
-from sklearn.model_selection import GroupShuffleSplit 
-from flaml import AutoML
+import random
+
+random.seed(9999)
+
+from sklearn.model_selection import GroupShuffleSplit, RandomizedSearchCV, GroupKFold
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 
 data = pd.read_parquet("data/model_data.parquet")
 
@@ -14,36 +18,39 @@ train = data.iloc[train_inds]
 test = data.iloc[test_inds]
 
 X_train = train.drop(columns=["reachno", "co2"])
+train_groups = train["reachno"]
 y_train = train["co2"]
 
 X_test = test.drop(columns=["reachno", "co2"])
+test_groups = test["reachno"]
 y_test = test["co2"]
 
-#https://github.com/microsoft/FLAML/blob/main/notebook/automl_lightgbm.ipynb
+#Random forest hyperparameters
+rf_param = {'bootstrap': [True, False], 
+            'max_depth': [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, None],
+            'max_features': ['auto', 'sqrt'],
+            'min_samples_leaf': [1, 2, 4],
+            'min_samples_split': [2, 5, 10],
+            'n_estimators': [50, 100, 250, 500, 750, 1000, 1250, 1500, 1750, 2000]}
 
-settings = {
-    "time_budget": 600,  # total running time in seconds
-    "metric": 'r2',  # primary metrics for regression can be chosen from: ['mae','mse','r2','rmse','mape']
-    "task": 'regression',  # task type    
-    "seed": 7654321,    # random seed
-}
+group_cv = GroupKFold(n_splits=4).split(X_train, y_train, train_groups)
 
-automl = AutoML()
-automl.fit(X_train, y_train, **settings)
+rf = RandomForestRegressor(n_jobs=-1, criterion="squared_error")
+rf_wrap = RandomizedSearchCV(rf, param_distributions=rf_param, 
+                             n_iter=20, scoring="r2", 
+                             cv=group_cv, refit=True, random_state=9999)
 
-#retrieve best config
-print('Best hyperparmeter config:', automl.best_config)
-print('Best r2 on validation data: {0:.4g}'.format(1-automl.best_loss))
-print('Training duration of best run: {0:.4g} s'.format(automl.best_config_train_time))
+#Fit model
+rf_wrap.fit(X_train, y_train)
 
-#compute predictions of testing dataset
-y_pred = automl.predict(X_test)
-print('Predicted labels', y_pred)
-print('True labels', y_test)
+#Predict for validation set
+yhat_val = rf_wrap.predict(X_test)
 
-#compute different metric values on testing dataset
-from flaml.ml import sklearn_metric_loss_score
+#Metrics on validation set
+r2 = r2_score(y_test, yhat_val)
+mae = mean_absolute_error(y_test, yhat_val)
+rmse = mean_squared_error(y_test, yhat_val, squared=False)
 
-print('r2', '=', 1 - sklearn_metric_loss_score('r2', y_pred, y_test))
-print('mse', '=', sklearn_metric_loss_score('mse', y_pred, y_test))
-print('mae', '=', sklearn_metric_loss_score('mae', y_pred, y_test))
+print("Rsq = {:.3f}, MAE = {:.3f}, RMSE = {:.3f}".format(r2, mae, rmse))
+
+#Rsq = 0.113, MAE = 59.276, RMSE = 111.491
