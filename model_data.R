@@ -56,7 +56,7 @@ dk_model_df <- rbindlist(dk_model_list, idcol="component")
 dk_model_df <- dcast(dk_model_df, Name + date ~ component, value.var = "value")
 
 #Read DK-model 1km UPSTREAM INTEGRATED
-dk_model_1km_files <- list.files("rawdata/dk_model_flow_1km_upstream/", full.names = TRUE, pattern="*.csv")
+dk_model_1km_files <- list.files("rawdata/dk_model_flow_1km_upstream_v2/", full.names = TRUE, pattern="*.csv")
 
 dk_model_1km_list <- lapply(dk_model_1km_files, function(x){
   
