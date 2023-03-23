@@ -1,4 +1,5 @@
 source("libs_and_funcs.R")
+setDTthreads(8)
 
 #Feature extraction in qpoint catchments
 
@@ -83,10 +84,6 @@ all_ta <- rbind(ncdf_to_dt("rawdata/features/DK_Ta_20km_1989-2023.nc"),
 all_ta <- all_ta[, Ta := as.numeric(Ta)][, time := as.IDate(time)]
 setkeyv(all_ta, c("X", "Y"))
 
-
-######Kør extraction, gem, og opdater modeldata og erda folder
-
-
 #Determine coverage fraction of climate cells for each catchment
 one_day_ta <- all_ta[time == as.IDate("1989-01-02"), ] |> 
   as_tibble() |> 
@@ -96,76 +93,50 @@ one_day_ta <- all_ta[time == as.IDate("1989-01-02"), ] |>
 one_day_ta_rast <- rast(one_day_ta)
 coverage_ta_list <- exact_extract(one_day_ta_rast, catchments, include_xy=TRUE, include_cols="id")
 
-#Process in chunks??? or in one, IDate is good
-#coverage_ta_list_split <- split(coverage_ta_list, rep_len(1:8, length(coverage_ta_list)))
+#Aggregate per site and day in chunks
+coverage_ta_list_split <- split(coverage_ta_list, ceiling(seq_along(coverage_ta_list)/5000))
 
-catchment_ta_list <- lapply(list(coverage_ta_list[1:50]), function(df_list){
+agg_ta_list <- lapply(coverage_ta_list_split, function(list){
   
-  dt <- rbindlist(df_list)[, value := NULL]
-  setnames(dt, c("x", "y"), c("X", "Y"))
-  setkeyv(dt, c("X", "Y"))
-  
-  dt_agg <- merge(all_ta, dt, allow.cartesian=TRUE)[, .(mean.airt = weighted.mean(Ta, coverage_fraction)), by= .(id, time)]
-  
+  coverage_ta_dt <- rbindlist(list)[, value := NULL]
+  setnames(coverage_ta_dt, c("x", "y"), c("X", "Y"))
+  setkeyv(coverage_ta_dt, c("X", "Y"))
+  dt_agg <- merge(all_ta, coverage_ta_dt, allow.cartesian=TRUE)[, X := NULL][, Y := NULL][, .(mean.airt = sum(Ta*coverage_fraction)/sum(coverage_fraction)), by= .(id, time)]
   return(dt_agg)
+  
 })
 
-
-
-
-
-#Combine and write to file
-rbindlist(catchment_ta_list) |> 
+#Write to file
+rbindlist(agg_ta_list) |> 
   as.data.frame() |> 
   write_parquet("rawdata/climate_airt.parquet")
 
 #Aggregate daily precipitation data for catchments
 all_prec <- rbind(ncdf_to_dt("rawdata/features/DK_DMI_Corr_Precip_10km_1989-2023.nc"), 
                   ncdf_to_dt("rawdata/features/BH_DMI_Corr_Precip_10km_1989-2023.nc"))
-all_prec <- all_prec[, P.DMI.corr := as.numeric(P.DMI.corr)][, time := as.Date(time)]
+all_prec <- all_prec[, P.DMI.corr := as.numeric(P.DMI.corr)][, time := as.IDate(time)]
 setkeyv(all_prec, c("X", "Y"))
 
-one_day_prec <- all_prec[time == as.Date("1989-01-02"), ] |> 
+one_day_prec <- all_prec[time == as.IDate("1989-01-02"), ] |> 
   as_tibble() |> 
   select(x=X, y=Y) |> 
   mutate(val=1)
 
 one_day_prec_rast <- rast(one_day_prec)
-
 coverage_prec_list <- exact_extract(one_day_prec_rast, catchments, include_xy=TRUE, include_cols="id")
 
-catchment_prec_list <- lapply(coverage_prec_list, function(df){
+coverage_prec_list_split <- split(coverage_prec_list, ceiling(seq_along(coverage_prec_list)/5000))
+
+agg_prec_list <- lapply(coverage_prec_list_split, function(list){
   
-  dt <- data.table(df)[, value := NULL]
-  setnames(dt, c("x", "y"), c("X", "Y"))
-  setkeyv(dt, c("X", "Y"))
-  
-  dt_agg <- merge(all_prec, dt, allow.cartesian=TRUE)[, .(mean.precip = weighted.mean(P.DMI.corr, coverage_fraction)), by= .(id, time)]
-  
+  coverage_prec_dt <- rbindlist(list)[, value := NULL]
+  setnames(coverage_prec_dt, c("x", "y"), c("X", "Y"))
+  setkeyv(coverage_prec_dt, c("X", "Y"))
+  dt_agg <- merge(all_prec, coverage_prec_dt, allow.cartesian=TRUE)[, X := NULL][, Y := NULL][, .(mean.precip = sum(P.DMI.corr*coverage_fraction)/sum(coverage_fraction)), by= .(id, time)]
   return(dt_agg)
+  
 })
 
-catchment_prec <- rbindlist(catchment_prec_list) |> 
-  as.data.frame()
-
-write_parquet(catchment_prec, "rawdata/climate_precip.parquet")
-
-
-
-
-
-
-# all_prec_ids <- all_prec[time == as.Date("1989-01-02"), ] |> 
-#   as.data.frame() |> 
-#   st_as_sf(coords=c("X", "Y"), crs=25832) |> 
-#   select(-time, -P.DMI.corr) |> 
-#   st_join(catchments, left=FALSE) |> 
-#   coords_to_col() |> 
-#   data.table()
-# setkeyv(all_prec_ids, c("X", "Y"))
-# 
-# catchment_prec_aggr <- merge(all_prec, all_prec_ids, allow.cartesian=TRUE)[, .(mean.precip = mean(P.DMI.corr)), by= .(id, time)]
-# 
-# catchment_prec_aggr |> 
-#   as.data.frame() |> 
-#   write_parquet("rawdata/climate_precip.parquet")
+rbindlist(agg_prec_list) |> 
+  as.data.frame() |> 
+  write_parquet("rawdata/climate_precip.parquet")
