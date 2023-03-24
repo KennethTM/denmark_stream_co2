@@ -74,7 +74,6 @@ dk_model_1km_df <- dcast(dk_model_1km_df, Name + date ~ component, value.var = "
 #Merge CO2 data and features based on id and date
 co2_q_point_dt <- co2_q_point |> 
   st_drop_geometry() |> 
-  rename(Name = name) |> 
   mutate(date = ymd(date)) |> 
   data.table()
 
@@ -88,5 +87,5 @@ co2_data_merge <- co2_data_merge[, doy := yday(date)][, year := year(date)]
 
 #Write to file
 co2_data_merge |> 
-  as.data.frame() |> #write_csv("co2_data_merge.csv")
+  as.data.frame() |>
   write_parquet("data/model_data_raw.parquet")

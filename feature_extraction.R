@@ -89,7 +89,9 @@ df_vals <- cbind("id" = catchments$id,
                  "mean.phraetic" = phraetic_vals, 
                  "mean.chalk" = chalk_vals, 
                  clay_slope_vals,
-                 bsm_vals)
+                 bsm_vals,
+                 #bsm_vals_1km
+                 )
 
 write_parquet(df_vals, "rawdata/static_features.parquet") 
 
