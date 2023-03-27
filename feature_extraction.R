@@ -8,7 +8,7 @@ catchments <- st_read("rawdata/q_points_watersheds.sqlite")
 q_points_snap <- st_read("rawdata/q_points_snap.sqlite")
 
 #Cut lower part of catchment using 1km buffer around q_point
-q_points_catchment_1km_list <- lapply(catchments$id, function(q){
+q_points_watersheds_1km_list <- lapply(catchments$id, function(q){
   
   q_catch <- catchments[catchments$id == q, ]
   q_point <- q_points_snap[q_points_snap$id == q, "id"][1, ]
@@ -21,11 +21,11 @@ q_points_catchment_1km_list <- lapply(catchments$id, function(q){
   
 })
 
-q_points_catchment_1km <- q_points_catchment_1km_list |> 
+q_points_watersheds_1km <- q_points_watersheds_1km_list |> 
   rbindlist() |> 
   st_as_sf()
 
-st_write("rawdata/q_points_catchment_1km.sqlite", delete_dsn=TRUE)
+st_write(q_points_watersheds_1km, "rawdata/q_points_watersheds_1km.sqlite", delete_dsn=TRUE)
 
 #Clay, slope, chalk and phraetic variables
 #File paths
@@ -80,8 +80,8 @@ names(bsm_stack) <- names(var_codes)
 
 bsm_vals <- exact_extract(bsm_stack, catchments, "mean", max_cells_in_memory=1e+9)
 
-#bsm_vals_1km <- exact_extract(bsm_stack, q_points_catchment_1km, "mean", max_cells_in_memory=1e+9)
-#names(bsm_vals_1km) <- paste0(names(bsm_vals_1km), "_1km")
+bsm_vals_1km <- exact_extract(bsm_stack, q_points_catchment_1km, "mean", max_cells_in_memory=1e+9)
+names(bsm_vals_1km) <- paste0(names(bsm_vals_1km), "_1km")
 
 #Combine extracted feature values and write to file 
 df_vals <- cbind("id" = catchments$id,
@@ -90,8 +90,7 @@ df_vals <- cbind("id" = catchments$id,
                  "mean.chalk" = chalk_vals, 
                  clay_slope_vals,
                  bsm_vals,
-                 #bsm_vals_1km
-                 )
+                 bsm_vals_1km)
 
 write_parquet(df_vals, "rawdata/static_features.parquet") 
 
