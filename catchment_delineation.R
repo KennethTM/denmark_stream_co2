@@ -5,7 +5,7 @@ library(whitebox)
 # wbt_fill_single_cell_pits(dem="data/dem/dhym_20m.tif",
 #                           output="data/dem/dhym_single.tif")
 
-wbt_fill_single_cell_pits(dem="data/dem/dtm_10m.tif",
+wbt_fill_single_cell_pits(dem="data/dem/dhym.tif",
                           output="data/dem/dhym_single.tif")
 
 wbt_breach_depressions_least_cost(dem = "data/dem/dhym_single.tif",
@@ -21,22 +21,22 @@ wbt_fill_depressions(dem = "data/dem/dhym_breach.tif",
 
 #Flowdirs
 taudem_flowdir <- paste0(mpi_settings, taudem_path, "d8flowdir",
-                         " -p ", "data/dem/dhym_20m_p.tif",
-                         " -sd8 ", "data/dem/dhym_20m_sd8.tif",
+                         " -p ", "data/dem/dhym_p.tif",
+                         " -sd8 ", "data/dem/dhym_sd8.tif",
                          " -fel ", "data/dem/dhym_breach_fill.tif")
 system(taudem_flowdir)
 
 #Flow accumulation
 taudem_acc <- paste0(mpi_settings, taudem_path, "aread8",
-                     " -p ", "data/dem/dhym_20m_p.tif",
-                     " -ad8 ", "data/dem/dhym_20m_ad8.tif",
+                     " -p ", "data/dem/dhym_p.tif",
+                     " -ad8 ", "data/dem/dhymm_ad8.tif",
                      " -nc")
 system(taudem_acc)
 
 #Threshold stream network
 taudem_threshold <- paste0(mpi_settings, taudem_path, "threshold",
-                           " -src ", "data/dem/dhym_20m_src.tif",
-                           " -ssa ", "data/dem/dhym_20m_ad8.tif",
+                           " -src ", "data/dem/dhym_src.tif",
+                           " -ssa ", "data/dem/dhym_ad8.tif",
                            " -thresh 250")
 system(taudem_threshold)
 
@@ -71,13 +71,13 @@ system(taudem_threshold)
 # system(taudem_snap)
 
 wbt_jenson_snap_pour_points(pour_pts = "data/dk_model/q_points.shp",
-                            streams = "data/dem/dhym_20m_src.tif",
+                            streams = "data/dem/dhym_src.tif",
                             output = "data/dk_model/q_points_snap.shp",
                             snap_dist = 500)
 
 #Delineate watershed draining to stream outlets
 taudem_gage <- paste0(mpi_settings, taudem_path, "gagewatershed",
-                      " -p ", "data/dem/dhym_20m_p.tif",
+                      " -p ", "data/dem/dhym_p.tif",
                       " -o ", "data/dk_model/q_points_snap.shp",
                       " -gw ", "data/dem/dhym_watersheds.tif",
                       " -id ", "data/dem/dhym_watersheds.txt")
@@ -138,8 +138,8 @@ upstream_watersheds <- function(id){
 
 # library(igraph)
 # conn[conn == -1] <- NA
-# x <- graph_from_data_frame(conn[,c(2, 1)])
-
+# x <- graph_from_data_frame(conn)
+# y <- decompose(x)
 
 conn_list <- lapply(watersheds_vec$id, upstream_watersheds)
 

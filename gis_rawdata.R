@@ -24,17 +24,17 @@ gdalbuildvrt(paste0("/vsizip/", dem_asc_files),
              allow_projection_difference = TRUE,
              a_srs = paste0("EPSG:", dk_epsg))
 
-#Create national 20 m dem for drainage basin delineation (minimum function used for resampling)
+#Create national 10 m dem for drainage basin delineation (minimum function used for resampling)
 gdalwarp(srcfile = "data/dem/dhym.vrt",
-         dstfile = "data/dem/dhym_20m.tif",
-         cutline = "data/dem/dk_border.sqlite",
+         dstfile = "data/dem/dhym.tif",
+         cutline = "data/dk_border.sqlite",
          crop_to_cutline = TRUE,
          overwrite = TRUE,
          dstnodata = -9999,
          r = "min",
          co = c("COMPRESS=LZW"),
          wo = c("NUM_THREADS=ALL_CPUS"),
-         tr = c(20, 20),
+         tr = c(10, 10),
          multi = TRUE,
          wm = 8000)
 
