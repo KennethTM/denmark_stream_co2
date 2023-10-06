@@ -16,10 +16,6 @@ dk_epsg <- 25832
 mpi_settings <- "mpiexec -n 8 "
 taudem_path <- "/home/kenneth/TauDEM-more-mpi-deprecations/src/build/"
 
-coords_to_col <- function(df){
-  cbind(st_drop_geometry(df), data.frame(st_coordinates(df)))
-}
-
 ncdf_to_dt <- function(path){
   read_ncdf(path) |> 
     st_as_sf(as_points = TRUE, long=TRUE) |> 

@@ -1,10 +1,10 @@
 source("libs_and_funcs.R")
 
-#Process and merge rawdata of chemistry and field observations in streams
-chem_raw <- read.csv2("rawdata/stream_data/stream_chem.csv")
+#Process and merge chemistry and field observations in streams
+chem_raw <- read.csv2("data/stream_data/stream_chem.csv")
 chem <- data.table(chem_raw)
 
-field_raw <- read.csv2("rawdata/stream_data/stream_field.csv")
+field_raw <- read.csv2("data/stream_data/stream_field.csv")
 field <- data.table(field_raw)
 
 chem_clean <- chem[,.(site_id = ObservationsStedNr, site_name = ObservationsStedNavn,
@@ -27,17 +27,15 @@ all_clean <- all_wide[, .(site_id, site_name, date,
                           ph = fcoalesce(field_pH_pH, chem_pH_pH),
                           wtr = `field_Vandtemperatur_grader C`)]
 
-all_na <- na.omit(all_clean)
+all_na_data_frame <- all_clean |> 
+  na.omit() |> 
+  data.frame()
 
-all_na_data_frame <- data.frame(all_na)
-
-write.csv(all_na_data_frame, "data/chemistry_data.csv", row.names = FALSE)
-
-#RAWDATA NEEDS SOME CLEANING
+write.csv(all_na_data_frame, "data/stream_data/stream_merged.csv", row.names = FALSE)
 
 #Calculate pco2 from alkalinity, ph and water temperature
 #Create point vector file and save
-chemistry_data <- read.csv( "data/chemistry_data.csv") |> 
+chemistry_data <- read.csv( "data/stream_data/stream_merged.csv") |> 
   tibble()
 
 #co2 umol liter, fco2 uatm
@@ -52,6 +50,6 @@ co2_data <- chemistry_data |>
 
 co2_data_vector <- co2_data |> 
   select(-aquaenv) |> 
-  st_as_sf(coords=c("x_coord","y_coord"), crs=25832)
+  st_as_sf(coords=c("x_coord", "y_coord"), crs=25832)
 
-st_write(co2_data_vector, "data/co2_data.sqlite", delete_dsn=TRUE)
+st_write(co2_data_vector, "data/stream_data/co2_data.sqlite", delete_dsn=TRUE)
