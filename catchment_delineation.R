@@ -2,10 +2,7 @@ source("libs_and_funcs.R")
 library(whitebox)
 
 #Use whiteboxtools to preprocess DEM
-# wbt_fill_single_cell_pits(dem="data/dem/dhym_20m.tif",
-#                           output="data/dem/dhym_single.tif")
-
-wbt_fill_single_cell_pits(dem="data/dem/dhym.tif",
+wbt_fill_single_cell_pits(dem="data/dem/dhym_minus_bh.tif",
                           output="data/dem/dhym_single.tif")
 
 wbt_breach_depressions_least_cost(dem = "data/dem/dhym_single.tif",
@@ -16,6 +13,31 @@ wbt_breach_depressions_least_cost(dem = "data/dem/dhym_single.tif",
 wbt_fill_depressions(dem = "data/dem/dhym_breach.tif",
                      output = "data/dem/dhym_breach_fill.tif",
                      fix_flats = TRUE)
+
+wbt_d8_pointer(dem = "data/dem/dhym_breach_fill.tif",
+               output = "data/dem/dhym_dirs.tif")
+
+wbt_d8_flow_accumulation(input = "data/dem/dhym_dirs.tif",
+                         output = "data/dem/dhym_accum.tif",
+                         pntr = TRUE)
+
+wbt_extract_streams(flow_accum = "data/dem/dhym_accum.tif",
+                    output = "data/dem/streams.tif",
+                    threshold = 1000)
+
+wbt_jenson_snap_pour_points(pour_pts = "data/dk_model/q_points.shp",
+                            streams = "data/dem/streams.tif",
+                            output = "data/dk_model/q_points_snap.shp",
+                            snap_dist = 200)
+
+wbt_unnest_basins(d8_pntr = "data/dem/dhym_dirs.tif",
+                  pour_pts = "data/dk_model/q_points_snap.shp",
+                  output = "data/dem/catchments/catchments.tif",
+                  compress_rasters = TRUE)
+
+
+
+
 
 #https://hydrology.usu.edu/taudem/taudem5/TauDEM53CommandLineGuide.pdf
 
