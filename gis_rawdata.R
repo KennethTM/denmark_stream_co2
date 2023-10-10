@@ -9,11 +9,6 @@ dk_border <- dk_border_raw |>
 
 st_write(dk_border, "data/dk_border.sqlite", delete_layer = TRUE)
 
-dk_border_minus_bh <- dk_border |> 
-  st_crop(c(xmin=441745.6, ymin=6049775.1, xmax=750000, ymax=6402206.9))
-
-st_write(dk_border_minus_bh, "data/dk_border_minus_bh.sqlite", delete_layer = TRUE)
-
 #Create vrt for hydro DEM tiles (1.6 meter resolution)
 dem_files <- list.files("/media/kenneth/d6c13395-8492-49ee-9c0f-6a165e34c95c1/dnk_lake_catchments/rawdata/DHYM_RAIN", pattern = "*.ZIP", full.names = TRUE)
 
@@ -43,15 +38,6 @@ gdalwarp(srcfile = "data/dem/dhym.vrt",
          multi = TRUE,
          wm = 8000)
 
-#crop to remove bornholm, adapt initial warpt to exclude bornholm and tap? depends on upstream analysis
-gdalwarp(srcfile = "data/dem/dhym.tif",
-         dstfile = "data/dem/dhym_minus_bh.tif",
-         co = c("COMPRESS=LZW"),
-         te = as.numeric(st_bbox(dk_border_minus_bh)),
-         tap = TRUE,
-         overwrite = TRUE,
-         tr = c(10, 10)) 
-
 #Add lake attribute and 
 dk_lakes <- st_read("/media/kenneth/d6c13395-8492-49ee-9c0f-6a165e34c95c1/autoencoder-for-lake-bathymetry/rawdata/DK_StandingWater.gml") |> 
   select(gml_id) |> 
@@ -64,7 +50,6 @@ q_points_coords <- data.frame(st_coordinates(q_points))
 q_points_lake <- q_points |> 
   bind_cols(q_points_coords) |> 
   rename(q_point_x = X, q_point_y = Y) |> 
-  mutate(in_lake = lengths(st_intersects(q_points, dk_lakes)),
-         FID = 1:n())
+  mutate(in_lake = lengths(st_intersects(q_points, dk_lakes)))
 
 st_write(q_points_lake, "data/dk_model/q_points.shp", delete_dsn=TRUE)

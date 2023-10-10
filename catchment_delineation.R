@@ -1,14 +1,12 @@
 source("libs_and_funcs.R")
-library(whitebox)
 
 #Use whiteboxtools to preprocess DEM
-wbt_fill_single_cell_pits(dem="data/dem/dhym_minus_bh.tif",
+wbt_fill_single_cell_pits(dem="data/dem/dhym.tif",
                           output="data/dem/dhym_single.tif")
 
 wbt_breach_depressions_least_cost(dem = "data/dem/dhym_single.tif",
                                   output = "data/dem/dhym_breach.tif",
-                                  dist=10,
-                                  fill = FALSE)
+                                  dist=10)
 
 wbt_fill_depressions(dem = "data/dem/dhym_breach.tif",
                      output = "data/dem/dhym_breach_fill.tif",
@@ -30,10 +28,58 @@ wbt_jenson_snap_pour_points(pour_pts = "data/dk_model/q_points.shp",
                             output = "data/dk_model/q_points_snap.shp",
                             snap_dist = 200)
 
+#Split up qpoints file as unnestbasins is restricted by signed int 8 bits dtype in output (max 32767)
+q_points_snap <- st_read("data/dk_model/q_points_snap.shp")
+
+q_points_snap_part_1 <- q_points_snap |> 
+  slice(1:31000) |> 
+  mutate(FID = 1:n(), 
+         offset = 0)
+
+q_points_snap_part_2 <- q_points_snap |> 
+  slice((31000+1):n()) |> 
+  mutate(FID = 1:n(), 
+         offset = 31000)
+
+st_write(q_points_snap_part_1, "data/dk_model/q_points_snap_part_1.shp", delete_dsn = TRUE)
+st_write(q_points_snap_part_2, "data/dk_model/q_points_snap_part_2.shp", delete_dsn = TRUE)
+
 wbt_unnest_basins(d8_pntr = "data/dem/dhym_dirs.tif",
-                  pour_pts = "data/dk_model/q_points_snap.shp",
-                  output = "data/dem/catchments/catchments.tif",
+                  pour_pts = "data/dk_model/q_points_snap_part_1.shp",
+                  output = "data/dem/catchments/catchments_part_1.tif",
                   compress_rasters = TRUE)
+
+wbt_unnest_basins(d8_pntr = "data/dem/dhym_dirs.tif",
+                  pour_pts = "data/dk_model/q_points_snap_part_2.shp",
+                  output = "data/dem/catchments/catchments_part_2.tif",
+                  compress_rasters = TRUE)
+
+catchment_files <- list.files("data/dem/catchments", pattern="*.tif", full.names = TRUE)
+
+lapply(catchment_files[1:2], function(path){
+  catchment_rast <- rast(path)
+  names(catchment_rast) <- "FID"
+
+  catchment_rast |> 
+    as.polygons() |> 
+    st_as_sf() |> 
+    st_cast("MULTIPOLYGON") |> 
+    mutate(file = sub(".tif", "", basename(path))) |>
+    st_write(sub(".tif", ".sqlite", path), delete_dsn=TRUE)
+
+})
+
+catchment_vec_files <- list.files("data/dem/catchments", pattern="*.sqlite", full.names = TRUE)
+catchment_vec <- lapply(catchment_vec_files, st_read)
+
+catchment_all <- catchment_vec |> 
+  rbindlist() |> 
+  st_as_sf() |> 
+  mutate(index = ifelse(grepl("part_1", file, fixed=TRUE), FID - 1, FID + 31000 - 1))
+
+#st_is_valid()
+
+st_write(catchment_all, "data/dem/q_points_catchments.sqlite")
 
 
 
@@ -155,13 +201,6 @@ upstream_watersheds <- function(id){
   return(all_ids)
   
 }
-
-
-
-# library(igraph)
-# conn[conn == -1] <- NA
-# x <- graph_from_data_frame(conn)
-# y <- decompose(x)
 
 conn_list <- lapply(watersheds_vec$id, upstream_watersheds)
 
