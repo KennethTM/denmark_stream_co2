@@ -13,8 +13,8 @@ theme_set(theme_pub)
 
 dk_epsg <- 25832
 
-#mpi_settings <- "mpiexec -n 8 "
-#taudem_path <- "/home/kenneth/TauDEM-more-mpi-deprecations/src/build/"
+mpi_settings <- "mpiexec -n 8 "
+taudem_path <- "/home/kenneth/TauDEM-more-mpi-deprecations/src/build/"
 
 # ncdf_to_dt <- function(path){
 #   read_ncdf(path) |> 

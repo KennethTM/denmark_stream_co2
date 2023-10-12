@@ -38,7 +38,7 @@ gdalwarp(srcfile = "data/dem/dhym.vrt",
          multi = TRUE,
          wm = 8000)
 
-#Add lake attribute and 
+#Add lake attribute and site elevation
 dk_lakes <- st_read("/media/kenneth/d6c13395-8492-49ee-9c0f-6a165e34c95c1/autoencoder-for-lake-bathymetry/rawdata/DK_StandingWater.gml") |> 
   select(gml_id) |> 
   st_transform(dk_epsg)
@@ -47,9 +47,14 @@ q_points <- st_read("data/dk_model/DK_mh_2020_100m_QPoints.shp")
 
 q_points_coords <- data.frame(st_coordinates(q_points))
 
+dhym <- rast("data/dem/dhym.tif")
+
+q_point_elev <- extract(dhym, vect(q_points))
+
 q_points_lake <- q_points |> 
   bind_cols(q_points_coords) |> 
   rename(q_point_x = X, q_point_y = Y) |> 
-  mutate(in_lake = lengths(st_intersects(q_points, dk_lakes)))
+  mutate(in_lake = lengths(st_intersects(q_points, dk_lakes)),
+         site_elev = q_point_elev$dhym)
 
 st_write(q_points_lake, "data/dk_model/q_points.shp", delete_dsn=TRUE)
