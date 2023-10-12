@@ -25,26 +25,49 @@ system(taudem_flowdir)
 #Flow accumulation
 taudem_acc <- paste0(mpi_settings, taudem_path, "aread8",
                      " -p ", "data/dem/dhym_p.tif",
-                     " -ad8 ", "data/dem/dhymm_ad8.tif",
+                     " -ad8 ", "data/dem/dhym_ad8.tif",
                      " -nc")
 system(taudem_acc)
 
 #Threshold stream network
 taudem_threshold <- paste0(mpi_settings, taudem_path, "threshold",
                            " -src ", "data/dem/dhym_src.tif",
-                           " -ssa ", "data/dem/dhymm_ad8.tif",
+                           " -ssa ", "data/dem/dhym_ad8.tif",
                            " -thresh 1000")
 system(taudem_threshold)
 
 wbt_jenson_snap_pour_points(pour_pts = "data/dk_model/q_points.shp",
                             streams = "data/dem/dhym_src.tif",
-                            output = "data/dk_model/q_points_snap.shp",
-                            snap_dist = 1000)
+                            output = "data/dk_model/q_points_snap_raw.shp",
+                            snap_dist = 500)
+
+#Add snapping info to qpoints
+q_points_snap_raw <- st_read("data/dk_model/q_points_snap_raw.shp")
+
+q_points_orig_coords <- data.frame(x = q_points_snap_raw$q_point_x, 
+                                   y = q_points_snap_raw$q_point_y) |> 
+  st_as_sf(crs=st_crs(q_points_snap_raw), coords=c("x", "y"))
+
+q_points_snap_raw$snap_dist <- as.numeric(st_distance(q_points_snap_raw, q_points_orig_coords, by_element = TRUE))
+
+#Check if stream site is snapped onto virtual stream network
+#Add an id to relate q points to watersheds (some q points are snapped to the same virtual stream cell)
+dhym_src <- rast("data/dem/dhym_src.tif")
+
+site_dhym_src <- extract(dhym_src, vect(q_points_snap_raw), cells=TRUE)
+
+q_points_snap <- q_points_snap_raw |> 
+  mutate(on_virtual_stream = site_dhym_src$dhym_src,
+         virtual_stream_id = site_dhym_src$cell) |> 
+  group_by(virtual_stream_id) |> 
+  mutate(id = cur_group_id())
+  
+st_write(q_points_snap, "data/dk_model/q_points_snap.sqlite", delete_dsn = TRUE)
 
 #Delineate watershed draining to stream outlets
 taudem_gage <- paste0(mpi_settings, taudem_path, "gagewatershed",
                       " -p ", "data/dem/dhym_p.tif",
-                      " -o ", "data/dk_model/q_points_snap.shp",
+                      " -o ", "data/dk_model/q_points_snap.sqlite",
                       " -gw ", "data/dem/dhym_watersheds.tif",
                       " -id ", "data/dem/dhym_watersheds.txt")
 system(taudem_gage)
@@ -64,8 +87,8 @@ upstream_watersheds <- function(id){
   
   all_ids <- c(id)
   current_ids <- c(id)
-  upstream_exist <- TRUE
   
+  upstream_exist <- TRUE
   while(upstream_exist){
     
     upstream_ids <- conn[conn$iddown %in% current_ids, ]$id
@@ -85,6 +108,7 @@ upstream_watersheds <- function(id){
 
 conn_list <- lapply(watersheds_vec$id, upstream_watersheds)
 
+#Union watersheds
 union_list <- lapply(conn_list, function(x){
   union_vec <- watersheds_vec |>
     filter(id %in% x) |> 
@@ -98,7 +122,7 @@ watershed_union <- union_list |>
   rbindlist() |> 
   st_as_sf()
 
-st_write(watershed_union, "data/dk_model/q_points_watersheds.sqlite")
+st_write(watershed_union, "data/dk_model/q_points_catchments.sqlite")
 
 # #Use mapshaper cmd line functions to simplify polygons
 # simplify_cmd <- paste("mapshaper-xl 16gb", "rawdata/q_points_watersheds.shp", "-simplify", "10%", "keep-shapes", "-o", "rawdata/q_points_watersheds_simple.shp")
