@@ -23,11 +23,6 @@ morpho <- rast(c(dem_file, slp_file, hand_file))
 basemap <- rast(basemap_files)
 names(basemap) <- basemap_features
 
-airtemp <- rast("data/features/airtemp.tif")
-names(airtemp) <- paste0(names(airtemp), "_airt")
-precip <- rast("data/features/precip.tif")
-names(precip) <- paste0(names(precip), "_precip")
-
 #Extract values
 phraetic_vals <- exact_extract(phraetic, catchments, "mean")
 chalk_vals <- exact_extract(chalk, catchments, "mean")
@@ -40,9 +35,6 @@ basemap_vals <- readRDS("basemap_vals.rds")
 
 basemap_vals_200m <- exact_extract(basemap, upstream_200m, "mean", max_cells_in_memory=1e+9)
 names(basemap_vals_200m) <- paste0(names(basemap_vals_200m), "_200m")
-
-airtemp_vals <- exact_extract(airtemp, catchments, "mean")
-precip_vals <- exact_extract(precip, catchments, "mean")
 
 #Calculate catchment area
 catchment_area <- catchments |> 
@@ -58,7 +50,24 @@ static_features <- cbind(catchment_area,
                          clay_vals,
                          basemap_vals,
                          basemap_vals_200m,
-                         airtemp_vals,
-                         precip_vals)
+                         )
 
 write_csv(static_features, "data/features/static_features.csv")
+
+#Extract dynamic climate variables and write to file
+airtemp <- rast("data/features/airtemp.tif")
+precip <- rast("data/features/precip.tif")
+
+airtemp_vals <- exact_extract(airtemp, catchments, "mean")
+precip_vals <- exact_extract(precip, catchments, "mean")
+
+airtemp_df <- bind_cols(id = catchments$id, airtemp_vals) |> 
+  gather(season, airt, -id) |> 
+  mutate(season=sub("mean.", "", season))
+
+precip_df <- bind_cols(id = catchments$id, precip_vals) |> 
+  gather(season, precip, -id) |> 
+  mutate(season=sub("mean.", "", season))
+
+left_join(airtemp_df, precip_df) |> 
+  write_csv("data/features/climate_features.csv")
