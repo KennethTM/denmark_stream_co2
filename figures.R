@@ -65,6 +65,8 @@ fig_2 <- test_obs_pred |>
   geom_point(shape = 1)+
   ylab(expression(Predicted~CO[2]~"(µM)"))+
   xlab(expression(Observed~CO[2]~"(µM)"))+
+  #scale_x_log10()+
+  #scale_y_log10()+
   xlim(0, 850)+
   ylim(0, 850)
 
@@ -122,7 +124,7 @@ fig_4_b <- pdp |>
   ylab(expression(CO[2]~"(µM)"))
 
 
-fig_4 <- fig_4_a + fig_4_b + plot_layout(ncol=2, widths=c(1, 2)) + plot_annotation(tag_levels = "A")
+fig_4 <- fig_4_a + fig_4_b + plot_layout(ncol=2, widths=c(1.5, 2)) + plot_annotation(tag_levels = "A")
 
 fig_4
 
@@ -131,3 +133,53 @@ ggsave("figures/figure_4.png", fig_4, width = 174, height = 120, units = "mm")
 #Figure 5
 
 #Figure 6
+
+#Figure correlation
+q_points_modeling <- read_parquet("data/q_points_modeling.parquet")
+
+numeric_preds <- c("site_elev",
+                 "discharge", "overland", "overland_drain", "sz", "sz_drain",
+                 "airt", "precip",
+                 "catchment_area", "mean.phraetic", "mean.chalk",  "mean.dhym",
+                 "mean.dhym_slope", "mean.dhym_hand", "mean.clay_a",  "mean.clay_b",
+                 "mean.clay_c",  "mean.clay_d",  "mean.artificial", "mean.agriculture",
+                 "mean.forest" , "mean.nature_eks_agriculture", "mean.stream",  
+                 "mean.lake", "mean.artificial_200m", "mean.agriculture_200m",
+                 "mean.forest_200m", "mean.nature_eks_agriculture_200m", 
+                 "mean.stream_200m", "mean.lake_200m")
+
+cor_matrix <- q_points_modeling |> 
+  select(all_of(numeric_preds)) |> 
+  cor(use = "complete.obs")
+
+cor_matrix[upper.tri(cor_matrix)] <- NA
+
+colnames(cor_matrix) <- sub("mean.", "", colnames(cor_matrix))
+rownames(cor_matrix) <- sub("mean.", "", rownames(cor_matrix))
+
+cor_df <- reshape2::melt(cor_matrix) |> 
+  na.omit()
+
+fig_corr <- cor_df |> 
+  ggplot(aes(Var1, Var2, fill=value, label=round(value, 2)))+
+  geom_tile()+
+  geom_text(size=1.5)+
+  scale_fill_gradient2(low="dodgerblue", high="coral", mid="grey", name="Correlation\ncoefficient", limits=c(-1, 1))+
+  xlab(NULL)+
+  ylab(NULL)+
+  theme(axis.text.x = element_text(angle=90, hjust=1, vjust=0.5), legend.position = c(0.2, 0.8))+
+  coord_equal()
+
+ggsave("figures/figure_correlation.png", fig_corr, width = 174, height = 174, units = "mm")
+
+#Figure learning curve
+learning_curve <- read_csv("data/learning_curve.csv")
+
+fig_learning <- learning_curve |> 
+  ggplot(aes(x=train_size_abs, y=test_mean, ymin=test_mean-test_sd, ymax=test_mean+test_sd))+
+  geom_line()+
+  geom_pointrange(shape=21, fill="white")+
+  ylab(expression("Cross-validation"~R^{2}-score))+
+  xlab("Training set size")
+
+ggsave("figures/figure_learning.png", fig_learning, width = 129, height = 84, units = "mm")

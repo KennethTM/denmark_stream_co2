@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import random
-from sklearn.model_selection import GroupShuffleSplit, RandomizedSearchCV, GroupKFold, cross_validate
+from sklearn.model_selection import GroupShuffleSplit, RandomizedSearchCV, GroupKFold, cross_validate, learning_curve
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error, mean_absolute_percentage_error
 from sklearn.preprocessing import PowerTransformer
@@ -16,8 +16,7 @@ from sklearn.neighbors import KNeighborsRegressor
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.cross_decomposition import PLSRegression
 import pickle
-from sklearn.inspection import permutation_importance
-from sklearn.inspection import partial_dependence
+from sklearn.inspection import permutation_importance, partial_dependence
 
 random.seed(9999)
 
@@ -157,9 +156,7 @@ for i in learner_list:
 benchmark_df = pd.concat([pd.DataFrame(i) for i in benchmark_results])
 benchmark_df.to_csv("data/model_benchmark.csv", index=False)
 
-#train best model
-#note NA's for other variables than mean.chalk
-
+#Train best model on entire training set
 median_impute_all = ColumnTransformer(
     transformers=[
         ("all_impute", SimpleImputer(), numeric_var_index),
@@ -242,3 +239,23 @@ for i in top_4_predictors:
 
 pdp_df = pd.concat(pdp_results)
 pdp_df.to_csv("data/partial_dependence.csv", index=False)
+
+#Learning curve
+pipeline = make_pipeline(
+        median_impute,
+        power_trans,
+        rf)
+
+pipeline_wrap = RandomizedSearchCV(pipeline, param_distributions=rf_param, n_iter=random_iters, cv=inner_cv, refit=True, random_state=9999)
+
+train_size_props = np.array([0.1, 0.3, 0.5, 0.7, 0.9, 1])
+train_size_abs, train_scores, test_scores = learning_curve(pipeline_wrap, X_train, y_train, groups = train_groups, train_sizes=train_size_props,
+                        cv=outer_cv, n_jobs=5, scoring="r2", fit_params={'groups': train_groups}) 
+
+learning_df = pd.DataFrame({"train_size_abs": train_size_abs,
+                            "train_size_props": train_size_props,
+                            "train_mean": train_scores.mean(axis=1),
+                            "train_sd": train_scores.std(axis=1),
+                            "test_mean": test_scores.mean(axis=1),
+                            "test_sd": test_scores.std(axis=1)})
+learning_df.to_csv("data/learning_curve.csv", index=False)
