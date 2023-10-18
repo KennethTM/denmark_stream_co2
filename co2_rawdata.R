@@ -31,25 +31,37 @@ all_na_data_frame <- all_clean |>
   na.omit() |> 
   data.frame()
 
-write.csv(all_na_data_frame, "data/stream_data/stream_merged.csv", row.names = FALSE)
-
 #Calculate pco2 from alkalinity, ph and water temperature
-#Create point vector file and save
-chemistry_data <- read.csv( "data/stream_data/stream_merged.csv") |> 
-  tibble()
-
-#co2 umol liter, fco2 uatm
-co2_data <- chemistry_data |> 
+#units: co2 umol/liter, fco2 uatm
+co2_data <- all_na_data_frame |> 
   filter(alk < 10, ph > 5.4, wtr > 0, wtr < 30) |> 
   mutate(aquaenv = pmap(list(wtr, ph, alk), ~aquaenv(S=0, t=..1, SumCO2 = NULL, pH = ..2, TA = ..3/1000)),
-         co2 = map_dbl(aquaenv, ~.$CO2)*10^6, 
-         co2_sat = map_dbl(aquaenv, ~.$CO2_sat)*10^6,
-         fco2 = map_dbl(aquaenv, ~.$fCO2)*10^6,
-         fco2_sat = map_dbl(aquaenv, ~.$fCO2atm)*10^6) |> 
+         co2 = map_dbl(aquaenv, ~ .$CO2)*10^6, 
+         co2_sat = map_dbl(aquaenv, ~ .$CO2_sat)*10^6,
+         fco2 = map_dbl(aquaenv, ~ .$fCO2)*10^6,
+         fco2_sat = map_dbl(aquaenv, ~ .$fCO2atm)*10^6) |> 
   filter(fco2 < 40000)
 
-co2_data_vector <- co2_data |> 
+co2_data_raw <- co2_data |> 
   select(-aquaenv) |> 
-  st_as_sf(coords=c("x_coord", "y_coord"), crs=25832)
+  rename(co2_site_id = site_id,
+         co2_site_x = x_coord, 
+         co2_site_y = y_coord)
 
-st_write(co2_data_vector, "data/stream_data/co2_data.sqlite", delete_dsn=TRUE)
+saveRDS(co2_data_raw, "data/stream_data/co2_data_raw.rds")
+
+#aggregate co2 data by season
+co2_data_agg <- co2_data_raw |> 
+  mutate(month = month(date)) |> 
+  filter(between(year(date), 2000, 2009)) |> 
+  left_join(season_map) |> 
+  group_by(co2_site_id, season) |> 
+  summarise(co2_site_x = mean(co2_site_x),
+            co2_site_y = mean(co2_site_y),
+            alk = mean(alk), ph=mean(ph), wtr=mean(wtr), 
+            co2=mean(co2), co2_sat=mean(co2_sat),
+            fco2=mean(fco2), fco2_sat=mean(fco2_sat), n=n()) |> 
+  ungroup() |> 
+  filter(n >= 4)
+
+saveRDS(co2_data_agg, "data/stream_data/co2_data_agg.rds")

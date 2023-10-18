@@ -49,8 +49,7 @@ static_features <- cbind(catchment_area,
                          morpho_vals,
                          clay_vals,
                          basemap_vals,
-                         basemap_vals_200m,
-                         )
+                         basemap_vals_200m)
 
 write_csv(static_features, "data/features/static_features.csv")
 

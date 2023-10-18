@@ -2,6 +2,9 @@ library(data.table);library(tidyverse);library(AquaEnv);library(sf);
 library(lubridate);library(patchwork);library(terra);library(lwgeom);
 library(exactextractr);library(nngeo);library(stars)
 library(foreign);library(gdalUtilities);library(whitebox)
+library(arrow)
+
+set.seed(9999)
 
 #Aq. Sci.:For most journals the figures should be 39 mm, 84 mm, 129 mm, or 174 mm wide and not higher than 234 mm.
 theme_pub <- theme_bw() + 
