@@ -87,11 +87,11 @@ lm = LinearRegression()
 knn = KNeighborsRegressor()
 knn_param = {'kneighborsregressor__n_neighbors': np.linspace(1, 50, 50, dtype="int")}
 
-tree_param = {"criterion": ["mse", "mae"],
-              "min_samples_split": [10, 20, 40],
-              "max_depth": [2, 6, 8],
-              "min_samples_leaf": [20, 40, 100],
-              "max_leaf_nodes": [5, 20, 100],
+tree_param = {"decisiontreeregressor__criterion": ["mse", "mae"],
+              "decisiontreeregressor__min_samples_split": [10, 20, 40],
+              "decisiontreeregressor__max_depth": [2, 6, 8],
+              "decisiontreeregressor__min_samples_leaf": [20, 40, 100],
+              "decisiontreeregressor__max_leaf_nodes": [5, 20, 100],
               }
 tree = DecisionTreeRegressor()
 
