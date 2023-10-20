@@ -185,6 +185,7 @@ fig_6 <- rewet_flux_qpoints |>
   xlab(expression("Observed CO"[2]*" flux (mmol m"^{-2}~d^{-1}*")"))+
   ylab(expression("Estimated CO"[2]*" flux (mmol m"^{-2}~d^{-1}*")"))+
   theme(legend.position = "bottom")+
+  scale_color_viridis_d(direction=-1)+
   guides(color=guide_legend(title.position = "top"))
 
 fig_6
