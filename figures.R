@@ -131,8 +131,65 @@ fig_4
 ggsave("figures/figure_4.png", fig_4, width = 174, height = 120, units = "mm")
 
 #Figure 5
+q_points_flux <- read_parquet("data/q_points_flux.parquet")
+
+fig_5 <- q_points_flux |> 
+  mutate(Season = str_to_title(season),
+         Season = factor(Season, levels=c("Spring", "Summer", "Autumn", "Winter"))) |> 
+  ggplot(aes(flux, fill=Season, col=Season))+
+  geom_density(alpha=0.5)+
+  ylab("Density")+
+  xlab(expression("CO"[2]*" flux (mmol m"^{-2}~d^{-1}*")"))+
+  scale_fill_viridis_d(direction=-1)+
+  scale_color_viridis_d(direction=-1)+
+  coord_cartesian(xlim=c(-50, 1000))+
+  theme(legend.position = "bottom")+
+  guides(fill=guide_legend(title.position = "top"))
+
+fig_5
+
+ggsave("figures/figure_5.png", fig_5, width = 129, height = 100, units = "mm")
 
 #Figure 6
+
+# #Write shapefile with coords and create new column with nearest qpoint
+# rewet_flux <- read_excel("data/co2_rewet_sites.xlsx")
+# 
+# rewet_flux |>
+#   st_as_sf(coords = c("longitude", "latitude"), crs=4326) |>
+#   st_transform(dk_epsg) |>
+#   group_by(site) |>
+#   slice(1) |>
+#   st_write("data/rewet_sites.sqlite")
+
+q_points_flux <- read_parquet("data/q_points_flux.parquet")
+rewet_flux <- read_excel("data/co2_rewet_sites_qpoints.xlsx")
+
+#rewet flux in umol/m2/s
+rewet_flux_qpoints <- rewet_flux |> 
+  mutate(datetime = ymd_hms(datetime_0),
+         date=as_date(datetime),
+         month = month(date),
+         flux_obs = mean_flux*60*60*24*10^-3) |> 
+  left_join(season_map) |>
+  left_join(q_points_flux, by=c("index", "season")) |> 
+  mutate(Season = str_to_title(season),
+         Season = factor(Season, levels=c("Spring", "Summer", "Autumn", "Winter"))) 
+
+fig_6 <- rewet_flux_qpoints |> 
+  ggplot(aes(flux_obs, flux, col=Season))+
+  geom_abline(intercept = 0, slope=1, linetype=3)+
+  geom_point()+
+  xlim(0, 450)+
+  ylim(0, 450)+
+  xlab(expression("Observed CO"[2]*" flux (mmol m"^{-2}~d^{-1}*")"))+
+  ylab(expression("Estimated CO"[2]*" flux (mmol m"^{-2}~d^{-1}*")"))+
+  theme(legend.position = "bottom")+
+  guides(color=guide_legend(title.position = "top"))
+
+fig_6
+
+ggsave("figures/figure_6.png", fig_6, width = 84, height = 100, units = "mm")
 
 #Figure correlation
 q_points_modeling <- read_parquet("data/q_points_modeling.parquet")
@@ -183,3 +240,23 @@ fig_learning <- learning_curve |>
   xlab("Training set size")
 
 ggsave("figures/figure_learning.png", fig_learning, width = 129, height = 84, units = "mm")
+
+#Figure water temperature vs air temperature for flux calculation
+q_points_modeling <- read_parquet("data/q_points_modeling.parquet")
+
+wtr_data <- q_points_modeling |> 
+  select(airt, wtr, season) |> 
+  na.omit()
+
+fig_wtr_model <- wtr_data |> 
+  ggplot(aes(x=airt, y=wtr))+
+  geom_abline(slope=1, intercept = 0, linetype=3)+
+  geom_point(shape=1)+
+  geom_smooth(method="lm", col="coral")+
+  ylim(0, 22)+
+  xlim(0, 22)+
+  xlab(expression("Air temperature ("*degree*"C)"))+
+  ylab(expression("Water temperature ("*degree*"C)"))
+
+ggsave("figures/wtr_airt.png", fig_wtr_model, width = 84, height = 84, units = "mm")
+

@@ -2,7 +2,7 @@ library(data.table);library(tidyverse);library(AquaEnv);library(sf);
 library(lubridate);library(patchwork);library(terra);library(lwgeom);
 library(exactextractr);library(nngeo);library(stars)
 library(foreign);library(gdalUtilities);library(whitebox)
-library(arrow)
+library(arrow);library(readxl)
 
 set.seed(9999)
 

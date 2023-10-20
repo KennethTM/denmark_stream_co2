@@ -36,10 +36,25 @@ taudem_threshold <- paste0(mpi_settings, taudem_path, "threshold",
                            " -thresh 1000")
 system(taudem_threshold)
 
+#### TODO
+#Streamnet processing to get slope of stream links
+taudem_streamnet <- paste0(taudem_path, "streamnet",
+                           " -p ", "data/dem/dhym_p.tif",
+                           " -src ", "data/dem/dhym_src.tif",
+                           " -ord ", "data/dem/dhym_ord.tif",
+                           " -ad8 ", "data/dem/dhym_ad8.tif",
+                           " -fel ", "data/dem/dhym_breach_fill.tif",
+                           " -tree ", "data/dem/dhym_tree.txt",
+                           " -coord ", "data/dem/dhym_coord.txt",
+                           " -net ", "data/dem/dhym_net.sqlite",
+                           " -w ", "data/dem/dhym_w.tif")
+system(taudem_streamnet)
+
+#Snap qpoints to virtual stream network
 wbt_jenson_snap_pour_points(pour_pts = "data/dk_model/q_points.shp",
                             streams = "data/dem/dhym_src.tif",
                             output = "data/dk_model/q_points_snap_raw.shp",
-                            snap_dist = 500)
+                            snap_dist = 500) #Increase to make sure all sites snap to src?? Filter by snap_dist later
 
 #Add snapping info to qpoints
 q_points_snap_raw <- st_read("data/dk_model/q_points_snap_raw.shp")
