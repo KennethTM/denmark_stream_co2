@@ -77,7 +77,9 @@ power_trans = ColumnTransformer(
     remainder='passthrough'
 )
 
-#Define learners
+#Define learners and hyperparameter search grids
+n_preds = len(X_train.columns)
+
 dummy_param = None
 dummy = DummyRegressor(strategy="mean")
 
@@ -85,50 +87,50 @@ lm_param = None
 lm = LinearRegression()
 
 knn = KNeighborsRegressor()
-knn_param = {'kneighborsregressor__n_neighbors': np.linspace(1, 50, 50, dtype="int")}
+knn_param = {'kneighborsregressor__n_neighbors': list(range(1, 50, 1))}
 
 tree_param = {"decisiontreeregressor__criterion": ["mse", "mae"],
-              "decisiontreeregressor__min_samples_split": [10, 20, 40],
-              "decisiontreeregressor__max_depth": [2, 6, 8],
-              "decisiontreeregressor__min_samples_leaf": [20, 40, 100],
-              "decisiontreeregressor__max_leaf_nodes": [5, 20, 100],
+              "decisiontreeregressor__max_depth": [2, 3, 5, 10, 20, 40, None],
+              "decisiontreeregressor__min_samples_leaf": [1, 2, 5, 10, 20, 40],
               }
 tree = DecisionTreeRegressor()
 
 plsr = PLSRegression(scale=False)
-plsr_param = {'plsregression__n_components': np.linspace(1, 30, 30, dtype="int")}
+plsr_param = {'plsregression__n_components': list(range(1, n_preds+1, 1))}
 
 elastic_param = {'elasticnet__alpha': np.logspace(-5, 5, 100, endpoint=True),
                  'elasticnet__l1_ratio': np.arange(0, 1, 0.01)}
 elastic = ElasticNet()
 
-svr_param = {'svr__kernel': ('linear', 'rbf','poly'), 
-            'svr__C':[1.5, 10],
-            'svr__gamma': [1e-7, 1e-4],
-            'svr__epsilon':[0.1,0.2,0.5,0.3]}
+svr_param = {'svr__kernel': ['linear', 'rbf', 'poly'], 
+            'svr__C': np.logspace(-0, 4, 8),
+            'svr__gamma': np.logspace(-4, 0, 8),
+            'svr__epsilon':[0.001, 0.01, 0.1, 0.2,0.3]}
 svr = SVR()
 
-
 rf_param = {'randomforestregressor__bootstrap': [True, False], 
-            'randomforestregressor__max_depth': [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, None],
-            'randomforestregressor__max_features': [1.0, 'sqrt'],
-            'randomforestregressor__min_samples_leaf': [1, 2, 4],
-            'randomforestregressor__min_samples_split': [2, 5, 10],
-            'randomforestregressor__n_estimators': [50, 100, 250, 500, 750, 1000, 1250, 1500, 1750, 2000]}
+            'randomforestregressor__max_depth': [2, 3, 5, 10, 20, 40, None],
+            'randomforestregressor__max_features': list(range(1, n_preds+1, 1)),
+            'randomforestregressor__criterion': ["squared_error", "absolute_error"],
+            "randomforestregressor__min_samples_leaf": [1, 2, 5, 10, 20, 40],
+            "randomforestregressor__max_leaf_nodes": [5, 10, 50, 100, None],
+            "randomforestregressor__max_samples": [0.1, 0.25, 0.5, 0.75, 0.9, None],
+            'randomforestregressor__n_estimators': [100, 250, 500, 750, 1000, 1250, 1500, 1750, 2000]}
 rf = RandomForestRegressor(n_jobs=5)
+
+learner_list = [{"name": "dummy", "model": dummy, "hparams": dummy_param},
+                {"name": "linear_model", "model": lm, "hparams": lm_param},
+                {"name": "k_nearest_neighbors", "model": knn, "hparams": knn_param},
+                {"name": "regression_tree", "model": tree, "hparams": tree_param},
+                {"name": "partial_least_squares_regression", "model": plsr, "hparams": plsr_param},
+                {"name": "elastic_net", "model": elastic, "hparams": elastic_param},
+                {"name": "support_vector_regression", "model": svr, "hparams": svr_param},
+                {"name": "random_forest", "model": rf, "hparams": rf_param}]
 
 #Bencmark models using nested cross-validation
 random_iters = 50
 inner_cv = GroupKFold(n_splits=4)
 outer_cv = GroupKFold(n_splits=5)
-
-learner_list = [{"name": "dummy", "model": dummy, "hparams": dummy_param},
-                {"name": "linear_model", "model": lm, "hparams": lm_param},
-                {"name": "k_nearest_neighbors", "model": knn, "hparams": knn_param},
-                {"name": "partial_least_squares_regression", "model": plsr, "hparams": plsr_param},
-                {"name": "elastic_net", "model": elastic, "hparams": elastic_param},
-                {"name": "support_vector_regression", "model": svr, "hparams": svr_param},
-                {"name": "random_forest", "model": rf, "hparams": rf_param}]
 
 metrics = ("r2", "neg_mean_absolute_error", "neg_root_mean_squared_error", "neg_mean_absolute_percentage_error")
 
@@ -144,7 +146,7 @@ for i in learner_list:
         i["model"])
 
     if i["hparams"] is not None:
-        pipeline_wrap = RandomizedSearchCV(pipeline, param_distributions=i["hparams"], n_iter=random_iters, cv=inner_cv, refit=True, random_state=9999)
+        pipeline_wrap = RandomizedSearchCV(pipeline, param_distributions=i["hparams"], n_iter=random_iters, cv=inner_cv, scoring="r2", refit=True, random_state=9999) #should scoring be neg_mean_absolute_error?
         cv_scores = cross_validate(pipeline_wrap, X_train, y_train, scoring=metrics, cv=outer_cv, groups = train_groups, fit_params={'groups': train_groups}, n_jobs=5)
     else:
         cv_scores = cross_validate(pipeline, X_train, y_train, scoring=metrics, cv=outer_cv, groups = train_groups)
