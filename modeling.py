@@ -67,15 +67,13 @@ median_impute = ColumnTransformer(
     transformers=[
         ("chalk_impute", SimpleImputer(), [chalk_index]),
     ],
-    remainder='passthrough'
-)
+    remainder='passthrough')
 
 power_trans = ColumnTransformer(
     transformers=[
         ("power_trans", PowerTransformer(standardize=True), numeric_var_index)
     ],
-    remainder='passthrough'
-)
+    remainder='passthrough')
 
 #Define learners and hyperparameter search grids
 n_preds = len(X_train.columns)
@@ -89,10 +87,9 @@ lm = LinearRegression()
 knn = KNeighborsRegressor()
 knn_param = {'kneighborsregressor__n_neighbors': list(range(1, 50, 1))}
 
-tree_param = {"decisiontreeregressor__criterion": ["mse", "mae"],
+tree_param = {"decisiontreeregressor__criterion": ["squared_error", "absolute_error"],
               "decisiontreeregressor__max_depth": [2, 3, 5, 10, 20, 40, None],
-              "decisiontreeregressor__min_samples_leaf": [1, 2, 5, 10, 20, 40],
-              }
+              "decisiontreeregressor__min_samples_leaf": [1, 2, 5, 10, 20, 40]}
 tree = DecisionTreeRegressor()
 
 plsr = PLSRegression(scale=False)
@@ -114,7 +111,6 @@ rf_param = {'randomforestregressor__bootstrap': [True, False],
             'randomforestregressor__criterion': ["squared_error", "absolute_error"],
             "randomforestregressor__min_samples_leaf": [1, 2, 5, 10, 20, 40],
             "randomforestregressor__max_leaf_nodes": [5, 10, 50, 100, None],
-            "randomforestregressor__max_samples": [0.1, 0.25, 0.5, 0.75, 0.9, None],
             'randomforestregressor__n_estimators': [100, 250, 500, 750, 1000, 1250, 1500, 1750, 2000]}
 rf = RandomForestRegressor(n_jobs=5)
 
@@ -146,7 +142,10 @@ for i in learner_list:
         i["model"])
 
     if i["hparams"] is not None:
-        pipeline_wrap = RandomizedSearchCV(pipeline, param_distributions=i["hparams"], n_iter=random_iters, cv=inner_cv, scoring="r2", refit=True, random_state=9999) #should scoring be neg_mean_absolute_error?
+         #should scoring be neg_mean_absolute_error?
+         #pls and nn could use gridsearch instead of randomsearch
+         #increase outer and inner cv??
+        pipeline_wrap = RandomizedSearchCV(pipeline, param_distributions=i["hparams"], n_iter=random_iters, cv=inner_cv, scoring="r2", refit=True, random_state=9999)
         cv_scores = cross_validate(pipeline_wrap, X_train, y_train, scoring=metrics, cv=outer_cv, groups = train_groups, fit_params={'groups': train_groups}, n_jobs=5)
     else:
         cv_scores = cross_validate(pipeline, X_train, y_train, scoring=metrics, cv=outer_cv, groups = train_groups)

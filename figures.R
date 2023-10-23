@@ -150,6 +150,62 @@ fig_5
 
 ggsave("figures/figure_5.png", fig_5, width = 129, height = 100, units = "mm")
 
+#Country estimated flux map
+q_points_flux <- read_parquet("data/q_points_flux.parquet")
+dk_border <- st_read("data/dk_border.sqlite")
+
+q_points_flux_sf <- q_points_flux |> 
+  select(q_point_x, q_point_y, season, flux) |> 
+  st_as_sf(coords=c("q_point_x", "q_point_y"), crs=dk_epsg) |> 
+  mutate(Season = str_to_title(season),
+         Season = factor(Season, levels=c("Spring", "Summer", "Autumn", "Winter"))) |> 
+  filter(between(flux, -50, 1000))
+
+fig_flux_map <- ggplot()+
+  geom_sf(data=dk_border, fill=NA, col="black") +
+  geom_sf(data=q_points_flux_sf, aes(col=flux), size=0.3, stroke=0)+
+  facet_wrap(.~Season)+
+  scale_color_viridis_c(name = expression("CO"[2]*" flux (mmol m"^{-2}~d^{-1}*")"))+
+  theme(strip.background = element_blank(), legend.position = "bottom",
+        axis.text = element_blank(), axis.ticks = element_blank())+
+  guides(color=guide_colorbar(title.position = "top", ticks = FALSE, barwidth = 12))
+
+fig_flux_map
+
+ggsave("figures/fig_flux_map.png", fig_flux_map, width = 174, height = 174, units = "mm")
+
+#Figure summer CO2 concentration and flux with zoom
+#In progress
+dk_lakes <- st_read("/media/kenneth/d6c13395-8492-49ee-9c0f-6a165e34c95c1/autoencoder-for-lake-bathymetry/rawdata/DK_StandingWater.gml") |> 
+  select(gml_id) |> 
+  st_transform(dk_epsg)
+
+network <- st_read("data/dk_model/dk_model_hip_2020.shp")
+
+zoom_bbox <- st_bbox(c(xmin = 699100, ymin = 6211500-10000, xmax = 699100+10000, ymax = 6211500), crs=dk_epsg)
+
+network_sub <- network |> 
+  st_crop(zoom_bbox)
+
+lakes_sub <- dk_lakes |> 
+  st_crop(zoom_bbox) |> 
+  mutate(area=as.numeric(st_area(geometry)))
+
+flux_sub <- q_points_flux_sf |> 
+  filter(Season == "Summer") |> 
+  st_crop(zoom_bbox)
+
+conc_sub <- q_points_predictions_filter |> 
+  filter(Season == "Summer") |> 
+  st_crop(zoom_bbox)
+
+fig_conc
+ggplot()+
+  geom_sf(data=network_sub, col="dodgerblue")+
+  geom_sf(data=lakes_sub |> filter(area > 10^5), col="dodgerblue")+
+  geom_sf(data = conc_sub, aes(col=co2_pred))+
+  scale_color_viridis_c(name = expression(Predicted~CO[2]~"(µM)"))
+
 #Figure 6
 
 # #Write shapefile with coords and create new column with nearest qpoint
@@ -260,4 +316,3 @@ fig_wtr_model <- wtr_data |>
   ylab(expression("Water temperature ("*degree*"C)"))
 
 ggsave("figures/wtr_airt.png", fig_wtr_model, width = 84, height = 84, units = "mm")
-
