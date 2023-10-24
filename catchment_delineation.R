@@ -36,9 +36,8 @@ taudem_threshold <- paste0(mpi_settings, taudem_path, "threshold",
                            " -thresh 1000")
 system(taudem_threshold)
 
-#### TODO
 #Streamnet processing to get slope of stream links
-taudem_streamnet <- paste0(taudem_path, "streamnet",
+taudem_streamnet <- paste0("mpiexec -n 2 ", taudem_path, "streamnet",
                            " -p ", "data/dem/dhym_p.tif",
                            " -src ", "data/dem/dhym_src.tif",
                            " -ord ", "data/dem/dhym_ord.tif",
@@ -47,6 +46,7 @@ taudem_streamnet <- paste0(taudem_path, "streamnet",
                            " -tree ", "data/dem/dhym_tree.txt",
                            " -coord ", "data/dem/dhym_coord.txt",
                            " -net ", "data/dem/dhym_net.sqlite",
+                           " -netlyr ", "dhym_net",
                            " -w ", "data/dem/dhym_w.tif")
 system(taudem_streamnet)
 
