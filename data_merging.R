@@ -66,10 +66,6 @@ q_points_features <- q_points_co2 |>
 write_parquet(q_points_features, "data/q_points_features.parquet")
 
 #Filter observations for modeling
-
-#what does the downstream feature in qpoints mean? same coordinates different id
-#snap distance?
-
 q_points_modeling <- q_points_features |> 
   filter(co2_site_id_dist < 250,
          snap_dist < 100,
@@ -81,6 +77,6 @@ q_points_modeling <- q_points_features |>
   ungroup()
 
 # q_points_modeling |> st_as_sf(coords=c("co2_site_x", "co2_site_y"), crs=25832) |>
-#   st_write("qpoints_200m_snap.sqlite", delete_dsn=TRUE)
+#   st_write("qpoints_250m_snap.sqlite", delete_dsn=TRUE)
 
 write_parquet(q_points_modeling, "data/q_points_modeling.parquet")

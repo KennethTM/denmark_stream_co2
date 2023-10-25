@@ -50,11 +50,19 @@ taudem_streamnet <- paste0("mpiexec -n 2 ", taudem_path, "streamnet",
                            " -w ", "data/dem/dhym_w.tif")
 system(taudem_streamnet)
 
+#Rasterize streamnet slope attribute
+src_rast <- rast(rast("data/dem/dhym_src.tif"))
+template_rast <- rast(src_rast)
+streamnet_vec <- vect("data/dem/dhym_net.sqlite")
+rasterize(streamnet_vec, template_rast, filename="data/dem/dhym_net_slope.tif", 
+          field="slope", overwrite=TRUE)
+
 #Snap qpoints to virtual stream network
+#TODO - increase to make sure all sites snap to src?? Filter by snap_dist later, 1000?
 wbt_jenson_snap_pour_points(pour_pts = "data/dk_model/q_points.shp",
                             streams = "data/dem/dhym_src.tif",
                             output = "data/dk_model/q_points_snap_raw.shp",
-                            snap_dist = 500) #Increase to make sure all sites snap to src?? Filter by snap_dist later
+                            snap_dist = 500)
 
 #Add snapping info to qpoints
 q_points_snap_raw <- st_read("data/dk_model/q_points_snap_raw.shp")
