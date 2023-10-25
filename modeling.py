@@ -85,29 +85,31 @@ lm_param = None
 lm = LinearRegression()
 
 knn = KNeighborsRegressor()
-knn_param = {'kneighborsregressor__n_neighbors': list(range(1, 50, 1))}
+knn_param = {"kneighborsregressor__n_neighbors": range(1, 50), 
+             "kneighborsregressor__weights": ['uniform', 'distance']}
 
 tree_param = {"decisiontreeregressor__criterion": ["squared_error", "absolute_error"],
               "decisiontreeregressor__max_depth": [2, 3, 5, 10, 20, 40, None],
+              "decisiontreeregressor__min_samples_split": [2, 5, 10], 
               "decisiontreeregressor__min_samples_leaf": [1, 2, 5, 10, 20, 40]}
 tree = DecisionTreeRegressor()
 
 plsr = PLSRegression(scale=False)
-plsr_param = {'plsregression__n_components': list(range(1, n_preds+1, 1))}
+plsr_param = {'plsregression__n_components': range(1, n_preds+1)}
 
 elastic_param = {'elasticnet__alpha': np.logspace(-5, 5, 100, endpoint=True),
                  'elasticnet__l1_ratio': np.arange(0, 1, 0.01)}
 elastic = ElasticNet()
 
 svr_param = {'svr__kernel': ['linear', 'rbf', 'poly'], 
-            'svr__C': np.logspace(-0, 4, 8),
-            'svr__gamma': np.logspace(-4, 0, 8),
+            'svr__C': np.logspace(-4, 4, 10),
+            'svr__gamma': np.logspace(-4, 4, 10),
             'svr__epsilon':[0.001, 0.01, 0.1, 0.2,0.3]}
 svr = SVR()
 
 rf_param = {'randomforestregressor__bootstrap': [True, False], 
             'randomforestregressor__max_depth': [2, 3, 5, 10, 20, 40, None],
-            'randomforestregressor__max_features': list(range(1, n_preds+1, 1)),
+            'randomforestregressor__max_features': range(1, n_preds+1),
             'randomforestregressor__criterion': ["squared_error", "absolute_error"],
             "randomforestregressor__min_samples_leaf": [1, 2, 5, 10, 20, 40],
             "randomforestregressor__max_leaf_nodes": [5, 10, 50, 100, None],
@@ -125,8 +127,8 @@ learner_list = [{"name": "dummy", "model": dummy, "hparams": dummy_param},
 
 #Bencmark models using nested cross-validation
 random_iters = 50
-inner_cv = GroupKFold(n_splits=4)
-outer_cv = GroupKFold(n_splits=5)
+inner_cv = GroupKFold(n_splits=5)
+outer_cv = GroupKFold(n_splits=10)
 
 metrics = ("r2", "neg_mean_absolute_error", "neg_root_mean_squared_error", "neg_mean_absolute_percentage_error")
 
@@ -142,9 +144,6 @@ for i in learner_list:
         i["model"])
 
     if i["hparams"] is not None:
-         #should scoring be neg_mean_absolute_error?
-         #pls and nn could use gridsearch instead of randomsearch
-         #increase outer and inner cv??
         pipeline_wrap = RandomizedSearchCV(pipeline, param_distributions=i["hparams"], n_iter=random_iters, cv=inner_cv, scoring="r2", refit=True, random_state=9999)
         cv_scores = cross_validate(pipeline_wrap, X_train, y_train, scoring=metrics, cv=outer_cv, groups = train_groups, fit_params={'groups': train_groups}, n_jobs=5)
     else:

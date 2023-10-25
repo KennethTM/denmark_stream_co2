@@ -22,7 +22,7 @@ fig_1_b <- q_points_modeling |>
   ggplot(aes(Season, co2))+
   geom_violin(fill="gray", col="gray")+
   geom_boxplot(width=0.1, outlier.shape=1)+
-  scale_y_log10()+
+  scale_y_log10(breaks=c(10, 30, 100, 300))+
   ylab(expression(CO[2]~"(µM)"))+
   xlab("Season")
 
@@ -92,7 +92,7 @@ fig_3 <- ggplot()+
   geom_sf(data=q_points_predictions_filter, aes(col=co2_pred), size=0.3, stroke=0)+
   facet_wrap(.~Season)+
   scale_color_viridis_c(name = expression(Predicted~CO[2]~"(µM)"), trans="log10", breaks=c(10, 20, 50, 100, 200, 500),
-                        option="cividis")+
+                        option="cividis", direction=-1)+
   theme(strip.background = element_blank(), legend.position = "bottom",
         axis.text = element_blank(), axis.ticks = element_blank())+
   guides(color=guide_colorbar(title.position = "top", ticks = FALSE, barwidth = 12))
@@ -108,14 +108,14 @@ fig_4_a <- importance |>
   ggplot(aes(x=reorder(variable, importance_mean), 
              y=importance_mean, 
              ymin=importance_mean-importance_std, ymax=importance_mean+importance_std))+
-  geom_pointrange(shape=21, fill="white")+
+  geom_pointrange(size=0.1)+
   coord_flip()+
   ylab("Variable importance")+
   xlab("Variable")
 
 fig_4_b <- pdp |> 
   mutate(variable = sub("mean.", "", variable),
-         variable = factor(variable, levels = c('dhym_slope', 'airt', 'lake', 'artificial_200m'))) |> 
+         variable = factor(variable, levels = c('dhym_slope', 'lake', 'airt', 'dhym_hand'))) |> 
   ggplot(aes(x, response))+
   geom_line()+
   facet_wrap(~variable, ncol=2, scales="free_x")+
@@ -136,7 +136,7 @@ q_points_flux <- read_parquet("data/q_points_flux.parquet")
 fig_5 <- q_points_flux |> 
   mutate(Season = str_to_title(season),
          Season = factor(Season, levels=c("Spring", "Summer", "Autumn", "Winter"))) |> 
-  ggplot(aes(flux, fill=Season, col=Season))+
+  ggplot(aes(co2_flux, fill=Season, col=Season))+
   geom_density(alpha=0.5)+
   ylab("Density")+
   xlab(expression("CO"[2]*" flux (mmol m"^{-2}~d^{-1}*")"))+
@@ -155,17 +155,17 @@ q_points_flux <- read_parquet("data/q_points_flux.parquet")
 dk_border <- st_read("data/dk_border.sqlite")
 
 q_points_flux_sf <- q_points_flux |> 
-  select(q_point_x, q_point_y, season, flux) |> 
+  select(q_point_x, q_point_y, season, co2_flux) |> 
   st_as_sf(coords=c("q_point_x", "q_point_y"), crs=dk_epsg) |> 
   mutate(Season = str_to_title(season),
          Season = factor(Season, levels=c("Spring", "Summer", "Autumn", "Winter"))) |> 
-  filter(between(flux, -50, 1000))
+  filter(between(co2_flux, -50, 1000))
 
 fig_flux_map <- ggplot()+
   geom_sf(data=dk_border, fill=NA, col="black") +
-  geom_sf(data=q_points_flux_sf, aes(col=flux), size=0.3, stroke=0)+
+  geom_sf(data=q_points_flux_sf, aes(col=co2_flux), size=0.3, stroke=0)+
   facet_wrap(.~Season)+
-  scale_color_viridis_c(name = expression("CO"[2]*" flux (mmol m"^{-2}~d^{-1}*")"))+
+  scale_color_viridis_c(name = expression("CO"[2]*" flux (mmol m"^{-2}~d^{-1}*")"), direction=-1)+
   theme(strip.background = element_blank(), legend.position = "bottom",
         axis.text = element_blank(), axis.ticks = element_blank())+
   guides(color=guide_colorbar(title.position = "top", ticks = FALSE, barwidth = 12))
@@ -233,7 +233,7 @@ rewet_flux_qpoints <- rewet_flux |>
          Season = factor(Season, levels=c("Spring", "Summer", "Autumn", "Winter"))) 
 
 fig_6 <- rewet_flux_qpoints |> 
-  ggplot(aes(flux_obs, flux, col=Season))+
+  ggplot(aes(flux_obs, co2_flux, col=Season))+
   geom_abline(intercept = 0, slope=1, linetype=3)+
   geom_point()+
   xlim(0, 450)+

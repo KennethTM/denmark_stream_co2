@@ -24,11 +24,10 @@ q_points_predictions$virtual_stream_slope <- extract(dhym_net_slope, q_points_pr
 #Calculate flux 
 #Flux in unit mmol co2/m2/d
 q_points_flux <- q_points_predictions |> 
-  left_join(network_slope) |> 
   mutate(wtr_pred = predict(wtr_model, newdata=data.frame(airt=airt)),
          v = v_from_q(discharge),
-         kgas = kgas(v, slope, wtr_pred),
+         kgas = kgas(v, virtual_stream_slope, wtr_pred),
          co2_eq = co2_eq_from_temp(wtr_pred),
-         flux = kgas*(co2_pred-co2_eq))
+         co2_flux = kgas*(co2_pred-co2_eq))
 
 write_parquet(q_points_flux, "data/q_points_flux.parquet")
