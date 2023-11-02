@@ -1,5 +1,7 @@
 source("libs_and_funcs.R")
 
+#TODO change co2 saving format to csv and rerun extraction
+
 #Load catchments
 catchments <- st_read("data/dk_model/q_points_catchments.sqlite")
 upstream_200m <- st_read("data/dk_model/q_points_upstream_200m.sqlite")

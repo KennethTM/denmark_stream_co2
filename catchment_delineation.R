@@ -58,11 +58,10 @@ rasterize(streamnet_vec, template_rast, filename="data/dem/dhym_net_slope.tif",
           field="slope", overwrite=TRUE)
 
 #Snap qpoints to virtual stream network
-#TODO - increase to make sure all sites snap to src?? Filter by snap_dist later, 1000?
 wbt_jenson_snap_pour_points(pour_pts = "data/dk_model/q_points.shp",
                             streams = "data/dem/dhym_src.tif",
                             output = "data/dk_model/q_points_snap_raw.shp",
-                            snap_dist = 500)
+                            snap_dist = 1500)
 
 #Add snapping info to qpoints
 q_points_snap_raw <- st_read("data/dk_model/q_points_snap_raw.shp")
@@ -145,8 +144,4 @@ watershed_union <- union_list |>
   rbindlist() |> 
   st_as_sf()
 
-st_write(watershed_union, "data/dk_model/q_points_catchments.sqlite")
-
-# #Use mapshaper cmd line functions to simplify polygons
-# simplify_cmd <- paste("mapshaper-xl 16gb", "rawdata/q_points_watersheds.shp", "-simplify", "10%", "keep-shapes", "-o", "rawdata/q_points_watersheds_simple.shp")
-# system(simplify_cmd)
+st_write(watershed_union, "data/dk_model/q_points_catchments.sqlite", delete_dsn=TRUE)

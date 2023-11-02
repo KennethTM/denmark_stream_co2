@@ -2,8 +2,8 @@ source("libs_and_funcs.R")
 
 #Estimate CO2 fluxes from predicted CO2 concentration and hydrological variables
 q_points_predictions <- read_parquet("data/q_points_predictions.parquet") |> 
-  filter(snap_dist < 100,
-         in_lake == 0,
+  filter(#snap_dist < 100,
+         #in_lake == 0,
          is.na(downstream))
 
 #Derive relationship between air and water temperature

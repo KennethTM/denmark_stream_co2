@@ -44,19 +44,21 @@ dk_lakes <- st_read(dk_lakes_path) |>
   st_transform(dk_epsg)
 
 q_points <- st_read("data/dk_model/DK_mh_2020_100m_QPoints.shp")
-
+names(q_points) <- tolower(names(q_points))
+  
 q_points_coords <- data.frame(st_coordinates(q_points))
 
 dhym <- rast("data/dem/dhym.tif")
 
 q_point_elev <- extract(dhym, vect(q_points))
 
-#TODO remove downstream qpoints
-
+#Remove downstream qpoints and column (specific functionality in dk-model)
 q_points_lake <- q_points |> 
   bind_cols(q_points_coords) |> 
   rename(q_point_x = X, q_point_y = Y) |> 
   mutate(in_lake = lengths(st_intersects(q_points, dk_lakes)),
-         site_elev = q_point_elev$dhym)
+         site_elev = q_point_elev$dhym) |> 
+  filter(is.na(downstream)) |> 
+  select(-downstream)
 
 st_write(q_points_lake, "data/dk_model/q_points.shp", delete_dsn=TRUE)
