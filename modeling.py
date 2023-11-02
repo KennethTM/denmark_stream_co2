@@ -8,7 +8,6 @@ from sklearn.preprocessing import PowerTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import make_pipeline
-from matplotlib import pyplot as plt
 from sklearn.dummy import DummyRegressor
 from sklearn.linear_model import LinearRegression, ElasticNet
 from sklearn.svm import SVR
@@ -17,6 +16,7 @@ from sklearn.tree import DecisionTreeRegressor
 from sklearn.cross_decomposition import PLSRegression
 import pickle
 from sklearn.inspection import permutation_importance, partial_dependence
+from matplotlib import pyplot as plt
 
 random.seed(9999)
 
@@ -128,7 +128,7 @@ learner_list = [{"name": "dummy", "model": dummy, "hparams": dummy_param},
 #Bencmark models using nested cross-validation
 random_iters = 50
 inner_cv = GroupKFold(n_splits=5)
-outer_cv = GroupKFold(n_splits=10)
+outer_cv = GroupKFold(n_splits=5) #check overfitting using less cv folds? 10 before
 
 metrics = ("r2", "neg_mean_absolute_error", "neg_root_mean_squared_error", "neg_mean_absolute_percentage_error")
 

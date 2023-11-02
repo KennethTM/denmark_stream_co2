@@ -1,6 +1,6 @@
 source("libs_and_funcs.R")
 
-#Figures and tables
+#Figures for manuscript
 
 #Figure 1
 q_points_modeling <- read_parquet("data/q_points_modeling.parquet")
@@ -32,29 +32,6 @@ fig_1
 
 ggsave("figures/figure_1.png", fig_1, width = 129, height = 180, units = "mm")
 
-#Table 2
-benchmark <- read_csv("data/model_benchmark.csv")
-
-metric_to_label <- function(values, digits = 2){
-  paste0(round(mean(values), digits), " (±", round(sd(values), digits), ")")
-}
-
-table_2 <- benchmark |> 
-  group_by(name) |> 
-  summarise(r2 = mean(test_r2),
-            rmse = mean(test_neg_root_mean_squared_error*-1),
-            mae = mean(test_neg_mean_absolute_error*-1),
-            mape = mean(test_neg_mean_absolute_percentage_error*-1),
-            r2_label = metric_to_label(test_r2), 
-            rmse_label = metric_to_label(test_neg_root_mean_squared_error*-1),
-            mae_label = metric_to_label(test_neg_mean_absolute_error*-1),
-            mape_label = metric_to_label(test_neg_mean_absolute_percentage_error*-1)) |> 
-  arrange(desc(r2)) 
-
-table_2|> 
-  select(name, contains("_label"))  |> 
-  write_csv("figures/table_2.csv")
-
 #Figure 2
 test_obs_pred <- read_csv("data/test_obs_pred.csv")
 summary(test_obs_pred)
@@ -62,17 +39,17 @@ summary(test_obs_pred)
 fig_2 <- test_obs_pred |> 
   ggplot(aes(x=y_test, y=yhat_test))+
   geom_abline(slope=1, intercept = 0, linetype=3)+
-  geom_point(shape = 1)+
+  geom_point(shape = 1, alpha=0.5)+
   ylab(expression(Predicted~CO[2]~"(µM)"))+
   xlab(expression(Observed~CO[2]~"(µM)"))+
-  #scale_x_log10()+
-  #scale_y_log10()+
   xlim(0, 850)+
   ylim(0, 850)
 
-fig_2
+fig_2_marg <- ggMarginal(fig_2, type="density")
 
-ggsave("figures/figure_2.png", fig_2, width = 84, height = 84, units = "mm")
+fig_2_marg
+
+ggsave("figures/figure_2.png", fig_2_marg, width = 84, height = 84, units = "mm")
 
 #Figure 3
 q_points_predictions <- read_parquet("data/q_points_predictions.parquet")
@@ -131,6 +108,7 @@ fig_4
 ggsave("figures/figure_4.png", fig_4, width = 174, height = 120, units = "mm")
 
 #Figure 5
+#Density plots of estimated fluxes
 q_points_flux <- read_parquet("data/q_points_flux.parquet")
 
 fig_5 <- q_points_flux |> 
@@ -150,7 +128,8 @@ fig_5
 
 ggsave("figures/figure_5.png", fig_5, width = 129, height = 100, units = "mm")
 
-#Country estimated flux map
+#Figure 6
+#Country map with estimated fluxes
 q_points_flux <- read_parquet("data/q_points_flux.parquet")
 dk_border <- st_read("data/dk_border.sqlite")
 
@@ -161,7 +140,7 @@ q_points_flux_sf <- q_points_flux |>
          Season = factor(Season, levels=c("Spring", "Summer", "Autumn", "Winter"))) |> 
   filter(between(co2_flux, -50, 1000))
 
-fig_flux_map <- ggplot()+
+fig_6 <- ggplot()+
   geom_sf(data=dk_border, fill=NA, col="black") +
   geom_sf(data=q_points_flux_sf, aes(col=co2_flux), size=0.3, stroke=0)+
   facet_wrap(.~Season)+
@@ -170,13 +149,14 @@ fig_flux_map <- ggplot()+
         axis.text = element_blank(), axis.ticks = element_blank())+
   guides(color=guide_colorbar(title.position = "top", ticks = FALSE, barwidth = 12))
 
-fig_flux_map
+fig_6
 
-ggsave("figures/fig_flux_map.png", fig_flux_map, width = 174, height = 174, units = "mm")
+ggsave("figures/figure_6.png", fig_6, width = 174, height = 174, units = "mm")
 
+#Figure 7
 #Figure summer CO2 concentration and flux with zoom
-#In progress
-dk_lakes <- st_read("/media/kenneth/d6c13395-8492-49ee-9c0f-6a165e34c95c1/autoencoder-for-lake-bathymetry/rawdata/DK_StandingWater.gml") |> 
+#TODO
+dk_lakes <- st_read(dk_lakes_path) |> 
   select(gml_id) |> 
   st_transform(dk_epsg)
 
@@ -206,7 +186,10 @@ ggplot()+
   geom_sf(data = conc_sub, aes(col=co2_pred))+
   scale_color_viridis_c(name = expression(Predicted~CO[2]~"(µM)"))
 
-#Figure 6
+#Figure 8
+#Compare estimated vs observed fluxes
+#TODO get full dataset and calc co2 concentrations and k600
+#TODO add plot with predicted and estimated co2 concentrations and k600
 
 # #Write shapefile with coords and create new column with nearest qpoint
 # rewet_flux <- read_excel("data/co2_rewet_sites.xlsx")
@@ -248,7 +231,71 @@ fig_6
 
 ggsave("figures/figure_6.png", fig_6, width = 84, height = 100, units = "mm")
 
-#Figure correlation
+#Tables and figures for supplementary material
+
+#Table S1 
+#(prepared in manuscript)
+
+#Table S2
+#Benchmark of predictive models
+benchmark <- read_csv("data/model_benchmark.csv")
+
+metric_to_label <- function(values, digits = 2){
+  paste0(round(mean(values), digits), " (±", round(sd(values), digits), ")")
+}
+
+table_s2 <- benchmark |> 
+  group_by(name) |> 
+  summarise(r2 = mean(test_r2),
+            rmse = mean(test_neg_root_mean_squared_error*-1),
+            mae = mean(test_neg_mean_absolute_error*-1),
+            mape = mean(test_neg_mean_absolute_percentage_error*-1),
+            r2_label = metric_to_label(test_r2), 
+            rmse_label = metric_to_label(test_neg_root_mean_squared_error*-1),
+            mae_label = metric_to_label(test_neg_mean_absolute_error*-1),
+            mape_label = metric_to_label(test_neg_mean_absolute_percentage_error*-1)) |> 
+  arrange(desc(r2)) 
+
+table_s2|> 
+  select(name, contains("_label"))  |> 
+  write_csv("figures/table_s2.csv")
+
+#Figure S1
+#water temperature vs air temperature for flux calculation
+q_points_modeling <- read_parquet("data/q_points_modeling.parquet")
+
+wtr_data <- q_points_modeling |> 
+  select(airt, wtr, season) |> 
+  na.omit()
+
+fig_wtr_model <- wtr_data |> 
+  ggplot(aes(x=airt, y=wtr))+
+  geom_abline(slope=1, intercept = 0, linetype=3)+
+  geom_point(shape=1)+
+  geom_smooth(method="lm", col="coral")+
+  ylim(0, 22)+
+  xlim(0, 22)+
+  xlab(expression("Air temperature ("*degree*"C)"))+
+  ylab(expression("Water temperature ("*degree*"C)"))
+
+ggsave("figures/figure_s1.png", fig_wtr_model, width = 84, height = 84, units = "mm")
+
+#Figure S2
+#Learning curve for random forest model
+learning_curve <- read_csv("data/learning_curve.csv")
+
+fig_learning <- learning_curve |> 
+  ggplot(aes(x=train_size_abs, y=test_mean, ymin=test_mean-test_sd, ymax=test_mean+test_sd))+
+  geom_line()+
+  geom_pointrange(shape=21, fill="white")+
+  ylab(expression("Cross-validation"~R^{2}-score))+
+  xlab("Training set size")+
+  xlim(0, 550)
+
+ggsave("figures/figure_s2.png", fig_learning, width = 129, height = 84, units = "mm")
+
+#Figure S3
+#Predictor varible inter-correlation
 q_points_modeling <- read_parquet("data/q_points_modeling.parquet")
 
 numeric_preds <- c("site_elev",
@@ -284,35 +331,4 @@ fig_corr <- cor_df |>
   theme(axis.text.x = element_text(angle=90, hjust=1, vjust=0.5), legend.position = c(0.2, 0.8))+
   coord_equal()
 
-ggsave("figures/figure_correlation.png", fig_corr, width = 174, height = 174, units = "mm")
-
-#Figure learning curve
-learning_curve <- read_csv("data/learning_curve.csv")
-
-fig_learning <- learning_curve |> 
-  ggplot(aes(x=train_size_abs, y=test_mean, ymin=test_mean-test_sd, ymax=test_mean+test_sd))+
-  geom_line()+
-  geom_pointrange(shape=21, fill="white")+
-  ylab(expression("Cross-validation"~R^{2}-score))+
-  xlab("Training set size")
-
-ggsave("figures/figure_learning.png", fig_learning, width = 129, height = 84, units = "mm")
-
-#Figure water temperature vs air temperature for flux calculation
-q_points_modeling <- read_parquet("data/q_points_modeling.parquet")
-
-wtr_data <- q_points_modeling |> 
-  select(airt, wtr, season) |> 
-  na.omit()
-
-fig_wtr_model <- wtr_data |> 
-  ggplot(aes(x=airt, y=wtr))+
-  geom_abline(slope=1, intercept = 0, linetype=3)+
-  geom_point(shape=1)+
-  geom_smooth(method="lm", col="coral")+
-  ylim(0, 22)+
-  xlim(0, 22)+
-  xlab(expression("Air temperature ("*degree*"C)"))+
-  ylab(expression("Water temperature ("*degree*"C)"))
-
-ggsave("figures/wtr_airt.png", fig_wtr_model, width = 84, height = 84, units = "mm")
+ggsave("figures/figure_s3.png", fig_corr, width = 174, height = 174, units = "mm")

@@ -56,6 +56,8 @@ static_features <- read_csv("data/features/static_features.csv")
 #Read climate features
 climate_features <- read_csv("data/features/climate_features.csv")
 
+# TODO create normalized discharge variable
+
 #Merge initial table
 q_points_features <- q_points_co2 |> 
   left_join(flow_df, multiple = "all") |> 
