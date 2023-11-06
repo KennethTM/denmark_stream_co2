@@ -75,3 +75,19 @@ co2_eq_from_temp <- function(temp, partial_pressure = 400){
   
   return(co2_eq)
 }
+
+#Determine stream width based on regional empirical relationships to catchment area (km2 in equations)
+#Not available for region 7 - which re-use relationship for region 1
+#Relationships for each region in dk-model
+region_relationships <- list("DK1" = \(x) 2.85*x^0.28,
+                             "DK2" = \(x) 3.07*x^0.38,
+                             "DK3" = \(x) 2.01*x^0.44,
+                             "DK4+5_east" = \(x) 3.47*x^0.29,
+                             "DK4+5_west" = \(x) 4.97*x^0.32,
+                             "DK6" = \(x) 1.5*x^0.39,
+                             "DK7" = \(x) 2.85*x^0.28)
+
+width_from_area <- function(region, area){
+  region_relationships[[region]](area)
+}
+

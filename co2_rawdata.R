@@ -48,9 +48,9 @@ co2_data_raw <- co2_data |>
          co2_site_x = x_coord, 
          co2_site_y = y_coord)
 
-saveRDS(co2_data_raw, "data/stream_data/co2_data_raw.rds")
+write_parquet(co2_data_raw, "data/stream_data/co2_data_raw.parquet")
 
-#aggregate co2 data by season
+#Aggregate co2 data by season
 co2_data_agg <- co2_data_raw |> 
   mutate(month = month(date)) |> 
   filter(between(year(date), 2000, 2009)) |> 
@@ -64,4 +64,4 @@ co2_data_agg <- co2_data_raw |>
   ungroup() |> 
   filter(n >= 4)
 
-saveRDS(co2_data_agg, "data/stream_data/co2_data_agg.rds")
+write_csv(co2_data_agg, "data/stream_data/co2_data_agg.csv")

@@ -58,6 +58,7 @@ rasterize(streamnet_vec, template_rast, filename="data/dem/dhym_net_slope.tif",
           field="slope", overwrite=TRUE)
 
 #Snap qpoints to virtual stream network
+#Filter qpoints based on distance later in analysis
 wbt_jenson_snap_pour_points(pour_pts = "data/dk_model/q_points.shp",
                             streams = "data/dem/dhym_src.tif",
                             output = "data/dk_model/q_points_snap_raw.shp",
