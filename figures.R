@@ -216,7 +216,7 @@ rewet_flux_qpoints <- rewet_flux |>
   mutate(Season = str_to_title(season),
          Season = factor(Season, levels=c("Spring", "Summer", "Autumn", "Winter"))) 
 
-fig_6 <- rewet_flux_qpoints |> 
+fig_8 <- rewet_flux_qpoints |> 
   ggplot(aes(flux_obs, co2_flux, col=Season))+
   geom_abline(intercept = 0, slope=1, linetype=3)+
   geom_point()+
@@ -228,9 +228,9 @@ fig_6 <- rewet_flux_qpoints |>
   scale_color_viridis_d(direction=-1)+
   guides(color=guide_legend(title.position = "top"))
 
-fig_6
+fig_8
 
-ggsave("figures/figure_6.png", fig_6, width = 84, height = 100, units = "mm")
+ggsave("figures/figure_8.png", fig_8, width = 84, height = 100, units = "mm")
 
 #Tables and figures for supplementary material
 
@@ -285,7 +285,7 @@ ggsave("figures/figure_s1.png", fig_wtr_model, width = 84, height = 84, units = 
 
 #Figure S2
 #Learning curve for random forest model
-learning_curve <- read_csv("data/learning_curve.csv")
+learning_curve <- read_csv("data/modeling/learning_curve.csv")
 
 fig_learning <- learning_curve |> 
   ggplot(aes(x=train_size_abs, y=test_mean, ymin=test_mean-test_sd, ymax=test_mean+test_sd))+

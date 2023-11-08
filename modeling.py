@@ -59,14 +59,14 @@ test_groups = test["co2_site_id"]
 y_test = test["co2"]
 
 #Preprocessing
-chalk_index = X_train.columns.get_loc("mean.chalk")
+#chalk_index = X_train.columns.get_loc("mean.chalk")
 numeric_var_index = [X_train.columns.get_loc(i) for i in numeric_preds]
 
-median_impute = ColumnTransformer(
-    transformers=[
-        ("chalk_impute", SimpleImputer(), [chalk_index]),
-    ],
-    remainder='passthrough')
+#median_impute = ColumnTransformer(
+#    transformers=[
+#        ("chalk_impute", SimpleImputer(), [chalk_index]),
+#    ],
+#    remainder='passthrough')
 
 power_trans = ColumnTransformer(
     transformers=[
@@ -138,7 +138,7 @@ for i in learner_list:
     print(i["name"])
 
     pipeline = make_pipeline(
-        median_impute,
+        #median_impute,
         power_trans,
         i["model"])
 
@@ -160,8 +160,7 @@ median_impute_all = ColumnTransformer(
     transformers=[
         ("all_impute", SimpleImputer(), numeric_var_index),
     ],
-    remainder='passthrough'
-)
+    remainder='passthrough')
 
 best_model = RandomForestRegressor(n_jobs=5)
 best_model_param = rf_param
@@ -244,7 +243,7 @@ pdp_df.to_csv("data/modeling/partial_dependence.csv", index=False)
 
 #Learning curve
 pipeline = make_pipeline(
-        median_impute,
+        #median_impute,
         power_trans,
         RandomForestRegressor(n_jobs=5))
 
