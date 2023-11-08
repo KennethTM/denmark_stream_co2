@@ -25,9 +25,9 @@ nearest_co2_site <- st_nearest_feature(q_points_orig_coords, co2_season_sf)
 
 co2_site_dist <- as.numeric(st_distance(q_points_orig_coords, co2_season_sf[nearest_co2_site, ], by_element = TRUE))
 
-q_points_co2 <- bind_cols(q_points_df, 
-                             co2_site_id = co2_season$co2_site_id[nearest_co2_site],
-                             co2_site_id_dist = co2_site_dist)
+q_points_co2 <- bind_cols(q_points_df,
+                          co2_site_id = co2_season$co2_site_id[nearest_co2_site],
+                          co2_site_id_dist = co2_site_dist)
 
 #Read DK-model outputs
 flow_files <- list.files("data/dk_model/flow_components", full.names = TRUE, pattern="*.csv")
@@ -56,7 +56,8 @@ static_features <- read_csv("data/features/static_features.csv")
 #Read climate features
 climate_features <- read_csv("data/features/climate_features.csv")
 
-# TODO create normalized discharge variable
+# TODO create normalized discharge variable, explore correlation, keep catch area for modeling?
+# TODO inspect snap dist
 
 #Merge initial table
 q_points_features <- q_points_co2 |> 

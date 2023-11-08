@@ -1,7 +1,5 @@
 source("libs_and_funcs.R")
 
-#TODO rerun extraction
-
 #Load catchments
 catchments <- st_read("data/dk_model/q_points_catchments.sqlite")
 upstream_200m <- st_read("data/dk_model/q_points_upstream_200m.sqlite")
@@ -29,11 +27,9 @@ names(basemap) <- basemap_features
 phraetic_vals <- exact_extract(phraetic, catchments, "mean")
 chalk_vals <- exact_extract(chalk, catchments, "mean")
 clay_vals <- exact_extract(clay, catchments, "mean", max_cells_in_memory=1e+09)
-#morpho_vals <- exact_extract(morpho, catchments, "mean", max_cells_in_memory=1e+09)
-morpho_vals <- readRDS("morpho_vals.rds")
+morpho_vals <- exact_extract(morpho, catchments, "mean", max_cells_in_memory=1e+09)
 
-#basemap_vals <- exact_extract(basemap, catchments, "mean", max_cells_in_memory=1e+9)
-basemap_vals <- readRDS("basemap_vals.rds")
+basemap_vals <- exact_extract(basemap, catchments, "mean", max_cells_in_memory=1e+9)
 
 basemap_vals_200m <- exact_extract(basemap, upstream_200m, "mean", max_cells_in_memory=1e+9)
 names(basemap_vals_200m) <- paste0(names(basemap_vals_200m), "_200m")

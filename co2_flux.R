@@ -32,6 +32,8 @@ q_points_flux <- q_points_predictions |>
 
 write_parquet(q_points_flux, "data/q_points_flux.parquet")
 
+#TODO refactor considering static stream area??
+
 #Estimate national flux from the stream network
 network <- st_read("data/dk_model/dk_model_hip_2020.shp")
 
@@ -95,4 +97,4 @@ point_network_agg <- point_network_flux |>
 point_network_agg$stream_flux |> mean() * 10^-9 #gigagram co2/year
 
 #stream area does not vary per season
-
+#calc flux per stream area and country area
