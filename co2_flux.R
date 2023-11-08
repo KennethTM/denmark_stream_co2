@@ -12,9 +12,8 @@ summary(wtr_model)
 
 #Estimate CO2 fluxes from predicted CO2 concentration and hydrological variables
 q_points_predictions <- read_parquet("data/q_points_predictions.parquet") |> 
-  filter(#snap_dist < 100,
-         #in_lake == 0,
-         is.na(downstream))
+  filter(snap_dist < 100,
+         in_lake == 0)
 
 #Extract slope values using virtual stream cell ids
 dhym_net_slope <- rast("data/dem/dhym_net_slope.tif")
@@ -32,12 +31,11 @@ q_points_flux <- q_points_predictions |>
 
 write_parquet(q_points_flux, "data/q_points_flux.parquet")
 
-#TODO refactor considering static stream area??
-
 #Estimate national flux from the stream network
 network <- st_read("data/dk_model/dk_model_hip_2020.shp")
 
 dk_border <- st_read("data/dk_border.sqlite")
+dk_area <- as.numeric(st_area(dk_border))
 
 dk_lakes <- st_read(dk_lakes_path) |> 
   select(gml_id) |> 
@@ -92,9 +90,10 @@ point_network_agg <- point_network_flux |>
   group_by(season) |> 
   summarise(stream_flux = sum(stream_flux, na.rm=TRUE)*365, #g co2/year 
             stream_area = sum(stream_area),
-            stream_width = mean(stream_width))
+            stream_width = mean(stream_width),
+            n = n(),
+            stream_length = resolution*n)
 
-point_network_agg$stream_flux |> mean() * 10^-9 #gigagram co2/year
-
-#stream area does not vary per season
-#calc flux per stream area and country area
+annual_flux <- mean(point_network_agg$stream_flux) #gram co2/year
+annual_flux_per_stream_area <- annual_flux/point_network_agg$stream_area[1] #gram co2/m2 stream
+annual_flux_per_dk_area <- annual_flux/dk_area #gram co2/m2 dk

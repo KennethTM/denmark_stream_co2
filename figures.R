@@ -14,8 +14,8 @@ q_points_sf <- q_points_modeling |>
 
 fig_1_a <- ggplot()+
   geom_sf(data=dk_border, fill=NA, col="black") +
-  geom_sf(data=network, col="dodgerblue") +
-  geom_sf(data=q_points_sf, col="coral", size=1)
+  geom_sf(data=network, col="dodgerblue", linewidth=0.25) +
+  geom_sf(data=q_points_sf, shape=1, size=1)
 
 fig_1_b <- q_points_modeling |> 
   mutate(Season = str_to_title(season)) |> 
@@ -33,7 +33,7 @@ fig_1
 ggsave("figures/figure_1.png", fig_1, width = 129, height = 180, units = "mm")
 
 #Figure 2
-test_obs_pred <- read_csv("data/test_obs_pred.csv")
+test_obs_pred <- read_csv("data/modeling/test_obs_pred.csv")
 summary(test_obs_pred)
 
 fig_2 <- test_obs_pred |> 
@@ -57,8 +57,7 @@ dk_border <- st_read("data/dk_border.sqlite")
 
 q_points_predictions_filter <- q_points_predictions |> 
   filter(snap_dist < 100,
-         in_lake == 0,
-         is.na(downstream)) |> 
+         in_lake == 0) |> 
   select(q_point_x, q_point_y, season, co2_pred) |> 
   st_as_sf(coords=c("q_point_x", "q_point_y"), crs=dk_epsg) |> 
   mutate(Season = str_to_title(season),
@@ -68,17 +67,19 @@ fig_3 <- ggplot()+
   geom_sf(data=dk_border, fill=NA, col="black") +
   geom_sf(data=q_points_predictions_filter, aes(col=co2_pred), size=0.3, stroke=0)+
   facet_wrap(.~Season)+
-  scale_color_viridis_c(name = expression(Predicted~CO[2]~"(µM)"), trans="log10", breaks=c(10, 20, 50, 100, 200, 500),
+  scale_color_viridis_c(name = expression(Predicted~CO[2]~"(µM)"), trans="log10", breaks=c(100, 250, 500),
                         option="cividis", direction=-1)+
   theme(strip.background = element_blank(), legend.position = "bottom",
         axis.text = element_blank(), axis.ticks = element_blank())+
   guides(color=guide_colorbar(title.position = "top", ticks = FALSE, barwidth = 12))
 
+fig_3
+
 ggsave("figures/figure_3.png", fig_3, width = 174, height = 174, units = "mm")
 
 #Figure 4
-importance <- read_csv("data/variable_importance.csv")
-pdp <- read_csv("data/partial_dependence.csv")
+importance <- read_csv("data/modeling/variable_importance.csv")
+pdp <- read_csv("data/modeling/partial_dependence.csv")
 
 fig_4_a <- importance |> 
   mutate(variable = sub("mean.", "", variable)) |> 
@@ -92,14 +93,13 @@ fig_4_a <- importance |>
 
 fig_4_b <- pdp |> 
   mutate(variable = sub("mean.", "", variable),
-         variable = factor(variable, levels = c('dhym_slope', 'lake', 'airt', 'dhym_hand'))) |> 
+         variable = factor(variable, levels = c('dhym_slope', 'dhym_hand', 'lake', 'artificial_200m'))) |> 
   ggplot(aes(x, response))+
   geom_line()+
   facet_wrap(~variable, ncol=2, scales="free_x")+
   theme(strip.background = element_blank())+
-  xlab("Scaled values")+
+  xlab(NULL)+
   ylab(expression(CO[2]~"(µM)"))
-
 
 fig_4 <- fig_4_a + fig_4_b + plot_layout(ncol=2, widths=c(1.5, 2)) + plot_annotation(tag_levels = "A")
 
@@ -120,7 +120,8 @@ fig_5 <- q_points_flux |>
   xlab(expression("CO"[2]*" flux (mmol m"^{-2}~d^{-1}*")"))+
   scale_fill_viridis_d(direction=-1)+
   scale_color_viridis_d(direction=-1)+
-  coord_cartesian(xlim=c(-50, 1000))+
+  coord_cartesian(xlim=c(0, 1000))+
+  scale_y_continuous(expand = expand_scale(mult=c(0, 0.1)))+
   theme(legend.position = "bottom")+
   guides(fill=guide_legend(title.position = "top"))
 
@@ -138,7 +139,7 @@ q_points_flux_sf <- q_points_flux |>
   st_as_sf(coords=c("q_point_x", "q_point_y"), crs=dk_epsg) |> 
   mutate(Season = str_to_title(season),
          Season = factor(Season, levels=c("Spring", "Summer", "Autumn", "Winter"))) |> 
-  filter(between(co2_flux, -50, 1000))
+  filter(between(co2_flux, 0, 1000))
 
 fig_6 <- ggplot()+
   geom_sf(data=dk_border, fill=NA, col="black") +
@@ -238,7 +239,7 @@ ggsave("figures/figure_6.png", fig_6, width = 84, height = 100, units = "mm")
 
 #Table S2
 #Benchmark of predictive models
-benchmark <- read_csv("data/model_benchmark.csv")
+benchmark <- read_csv("data/modeling/model_benchmark.csv")
 
 metric_to_label <- function(values, digits = 2){
   paste0(round(mean(values), digits), " (±", round(sd(values), digits), ")")
@@ -278,6 +279,8 @@ fig_wtr_model <- wtr_data |>
   xlab(expression("Air temperature ("*degree*"C)"))+
   ylab(expression("Water temperature ("*degree*"C)"))
 
+fig_wtr_model
+
 ggsave("figures/figure_s1.png", fig_wtr_model, width = 84, height = 84, units = "mm")
 
 #Figure S2
@@ -292,6 +295,8 @@ fig_learning <- learning_curve |>
   xlab("Training set size")+
   xlim(0, 550)
 
+fig_learning
+
 ggsave("figures/figure_s2.png", fig_learning, width = 129, height = 84, units = "mm")
 
 #Figure S3
@@ -299,7 +304,7 @@ ggsave("figures/figure_s2.png", fig_learning, width = 129, height = 84, units = 
 q_points_modeling <- read_parquet("data/q_points_modeling.parquet")
 
 numeric_preds <- c("site_elev",
-                 "discharge", "overland", "overland_drain", "sz", "sz_drain",
+                 "discharge", "discharge_specific", "overland", "overland_drain", "sz", "sz_drain",
                  "airt", "precip",
                  "catchment_area", "mean.phraetic", "mean.chalk",  "mean.dhym",
                  "mean.dhym_slope", "mean.dhym_hand", "mean.clay_a",  "mean.clay_b",
@@ -330,5 +335,7 @@ fig_corr <- cor_df |>
   ylab(NULL)+
   theme(axis.text.x = element_text(angle=90, hjust=1, vjust=0.5), legend.position = c(0.2, 0.8))+
   coord_equal()
+
+fig_corr
 
 ggsave("figures/figure_s3.png", fig_corr, width = 174, height = 174, units = "mm")

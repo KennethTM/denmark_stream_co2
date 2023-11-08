@@ -12,6 +12,10 @@ wbt_fill_depressions_wang_and_liu(dem = "data/dem/dhym_breach.tif",
                                   output = "data/dem/dhym_breach_fill.tif",
                                   fix_flats = TRUE)
 
+# wbt_fill_depressions(dem = "data/dem/dhym_breach.tif",
+#                      output = "data/dem/dhym_breach_fill.tif",
+#                      fix_flats = TRUE)
+
 #Use taudem to delineate watersheds
 #https://hydrology.usu.edu/taudem/taudem5/TauDEM53CommandLineGuide.pdf
 

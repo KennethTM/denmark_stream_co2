@@ -1,6 +1,10 @@
 import pandas as pd
 import numpy as np
 import random
+import json
+import pickle
+from matplotlib import pyplot as plt
+
 from sklearn.model_selection import GroupShuffleSplit, RandomizedSearchCV, GroupKFold, cross_validate, learning_curve
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error, mean_absolute_percentage_error
@@ -14,23 +18,18 @@ from sklearn.svm import SVR
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.cross_decomposition import PLSRegression
-import pickle
 from sklearn.inspection import permutation_importance, partial_dependence
-from matplotlib import pyplot as plt
 
 random.seed(9999)
 
 #Role of variables
 numeric_preds = ["site_elev",
-                "discharge", "overland", "overland_drain", "sz", "sz_drain",
-                "airt", "precip",
-                "catchment_area", "mean.phraetic", "mean.chalk",  "mean.dhym",
-                "mean.dhym_slope", "mean.dhym_hand", "mean.clay_a",  "mean.clay_b",
-                "mean.clay_c",  "mean.clay_d",  "mean.artificial", "mean.agriculture",
-                "mean.forest" , "mean.nature_eks_agriculture", "mean.stream",  
-                "mean.lake", "mean.artificial_200m", "mean.agriculture_200m",
-                "mean.forest_200m", "mean.nature_eks_agriculture_200m", 
-                "mean.stream_200m", "mean.lake_200m"]
+                "discharge_specific", "overland", "overland_drain", "sz", "sz_drain",
+                "airt", "precip", "catchment_area",
+                "mean.phraetic",  "mean.dhym", "mean.dhym_slope", "mean.dhym_hand", 
+                "mean.clay_a",  "mean.clay_b", "mean.clay_c",  "mean.clay_d",  
+                "mean.artificial", "mean.agriculture", "mean.forest" , "mean.nature_eks_agriculture", "mean.stream", "mean.lake", 
+                "mean.artificial_200m", "mean.agriculture_200m", "mean.forest_200m", "mean.nature_eks_agriculture_200m", "mean.stream_200m", "mean.lake_200m"]
 
 target = "co2"
 grouping = "co2_site_id"
@@ -128,7 +127,7 @@ learner_list = [{"name": "dummy", "model": dummy, "hparams": dummy_param},
 #Bencmark models using nested cross-validation
 random_iters = 50
 inner_cv = GroupKFold(n_splits=5)
-outer_cv = GroupKFold(n_splits=5) #check overfitting using less cv folds? 10 before
+outer_cv = GroupKFold(n_splits=5)
 
 metrics = ("r2", "neg_mean_absolute_error", "neg_root_mean_squared_error", "neg_mean_absolute_percentage_error")
 
@@ -154,7 +153,7 @@ for i in learner_list:
     benchmark_results.append(cv_scores)
 
 benchmark_df = pd.concat([pd.DataFrame(i) for i in benchmark_results])
-benchmark_df.to_csv("data/model_benchmark.csv", index=False)
+benchmark_df.to_csv("data/modeling/model_benchmark.csv", index=False)
 
 #Train best model on entire training set
 median_impute_all = ColumnTransformer(
@@ -172,15 +171,13 @@ pipeline = make_pipeline(
     power_trans,
     best_model)
 
-random_iters_best_model = 100
-
-pipeline_wrap = RandomizedSearchCV(pipeline, param_distributions=best_model_param, n_iter=random_iters_best_model, cv=inner_cv, refit=True, random_state=9999)
+pipeline_wrap = RandomizedSearchCV(pipeline, param_distributions=best_model_param, n_iter=random_iters, cv=inner_cv, refit=True, random_state=9999)
 
 #Fit model
 pipeline_wrap.fit(X_train, y_train, groups=train_groups)
 
 #Save model
-with open('data/best_model.pkl','wb') as dst:
+with open('data/modeling/best_model.pkl','wb') as dst:
     pickle.dump(pipeline_wrap, dst)
 
 ##load
@@ -195,11 +192,16 @@ r2 = r2_score(y_test, yhat_test)
 mae = mean_absolute_error(y_test, yhat_test)
 rmse = mean_squared_error(y_test, yhat_test, squared=False)
 mape = mean_absolute_percentage_error(y_test, yhat_test)
+pearson = np.corrcoef(y_test, yhat_test)[0, 1]
 
-print("Rsq = {:.3f}, MAE = {:.3f}, RMSE = {:.3f}, MAPE = {:.3f}".format(r2, mae, rmse, mape))
+#Test metrics
+test_metrics = {'r2': r2, 'mae': mae, 'rmse': rmse, "mape": mape, "pearson": pearson}
+
+with open('data/modeling/test_metrics.json', 'w') as json_file:
+  json.dump(test_metrics, json_file)
 
 obs_pred_df = pd.DataFrame({"y_test": y_test, "yhat_test": yhat_test})
-obs_pred_df.to_csv("data/test_obs_pred.csv", index=False)
+obs_pred_df.to_csv("data/modeling/test_obs_pred.csv", index=False)
 
 #Predict for all qpoints
 qpoints_raw = pd.read_parquet("data/q_points_features.parquet")
@@ -222,7 +224,7 @@ importance = permutation_importance(pipeline_wrap, X_test, y_test, n_repeats=25,
 importance_df = pd.DataFrame({"variable": X_test.columns,
                             "importance_mean": importance["importances_mean"], 
                             "importance_std": importance["importances_std"]})
-importance_df.to_csv("data/variable_importance.csv", index=False)
+importance_df.to_csv("data/modeling/variable_importance.csv", index=False)
 
 #PDP plots
 top_4_predictors = importance_df.sort_values("importance_mean", ascending=False)["variable"][:4].tolist()
@@ -238,13 +240,13 @@ for i in top_4_predictors:
     pdp_results.append(i_df)
 
 pdp_df = pd.concat(pdp_results)
-pdp_df.to_csv("data/partial_dependence.csv", index=False)
+pdp_df.to_csv("data/modeling/partial_dependence.csv", index=False)
 
 #Learning curve
 pipeline = make_pipeline(
         median_impute,
         power_trans,
-        rf)
+        RandomForestRegressor(n_jobs=5))
 
 pipeline_wrap = RandomizedSearchCV(pipeline, param_distributions=rf_param, n_iter=random_iters, cv=inner_cv, refit=True, random_state=9999)
 
@@ -258,4 +260,4 @@ learning_df = pd.DataFrame({"train_size_abs": train_size_abs,
                             "train_sd": train_scores.std(axis=1),
                             "test_mean": test_scores.mean(axis=1),
                             "test_sd": test_scores.std(axis=1)})
-learning_df.to_csv("data/learning_curve.csv", index=False)
+learning_df.to_csv("data/modeling/learning_curve.csv", index=False)

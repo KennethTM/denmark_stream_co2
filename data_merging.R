@@ -15,7 +15,7 @@ q_points_orig_coords <- data.frame(x = q_points_snap$q_point_x,
   st_as_sf(crs=st_crs(q_points_snap), coords=c("x", "y"))
 
 #Read and filter co2 data
-co2_season <- readRDS("data/stream_data/co2_data_agg.rds")
+co2_season <- read_csv("data/stream_data/co2_data_agg.csv")
 
 co2_season_sf <- co2_season |> 
   st_as_sf(coords=c("co2_site_x", "co2_site_y"), crs=dk_epsg)
@@ -56,15 +56,13 @@ static_features <- read_csv("data/features/static_features.csv")
 #Read climate features
 climate_features <- read_csv("data/features/climate_features.csv")
 
-# TODO create normalized discharge variable, explore correlation, keep catch area for modeling?
-# TODO inspect snap dist
-
 #Merge initial table
 q_points_features <- q_points_co2 |> 
   left_join(flow_df, multiple = "all") |> 
   left_join(climate_features) |> 
   left_join(static_features) |> 
-  left_join(co2_season)
+  left_join(co2_season) |> 
+  mutate(discharge_specific = (discharge*10^3)/(catchment_area*10^-6)) #l/s/km2
 
 write_parquet(q_points_features, "data/q_points_features.parquet")
 
@@ -73,8 +71,7 @@ q_points_modeling <- q_points_features |>
   filter(co2_site_id_dist < 250,
          snap_dist < 100,
          !is.na(co2),
-         in_lake == 0,
-         is.na(downstream)) |> 
+         in_lake == 0) |> 
   group_by(co2_site_id, season) |> 
   slice_min(co2_site_id_dist) |> 
   ungroup()
