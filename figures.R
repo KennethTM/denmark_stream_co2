@@ -7,6 +7,14 @@ q_points_modeling <- read_parquet("data/q_points_modeling.parquet")
 dk_border <- st_read("data/dk_border.sqlite")
 network <- st_read("data/dk_model/dk_model_hip_2020.shp")
 
+ice_line <- st_read("data/iceage/Isrand_poly.shp") |> 
+  slice(1) |> 
+  st_transform(dk_epsg) |>
+  st_crop(dk_border) |> 
+  st_cast("LINESTRING") |> 
+  st_intersection(dk_border) |> 
+  st_collection_extract("LINESTRING")
+
 q_points_sf <- q_points_modeling |> 
   st_as_sf(coords=c("q_point_x", "q_point_y"), crs=dk_epsg) |> 
   group_by(index) |> 
@@ -15,6 +23,7 @@ q_points_sf <- q_points_modeling |>
 fig_1_a <- ggplot()+
   geom_sf(data=dk_border, fill=NA, col="black") +
   geom_sf(data=network, col="dodgerblue", linewidth=0.25) +
+  geom_sf(data=ice_line, col= "coral") +
   geom_sf(data=q_points_sf, shape=1, size=1)
 
 fig_1_b <- q_points_modeling |> 
@@ -93,7 +102,7 @@ fig_4_a <- importance |>
 
 fig_4_b <- pdp |> 
   mutate(variable = sub("mean.", "", variable),
-         variable = factor(variable, levels = c('dhym_slope', 'dhym_hand', 'lake', 'artificial_200m'))) |> 
+         variable = factor(variable, levels = c('dhym_slope', 'dhym_hand', 'airt', 'phraetic'))) |> 
   ggplot(aes(x, response))+
   geom_line()+
   facet_wrap(~variable, ncol=2, scales="free_x")+
@@ -220,6 +229,7 @@ fig_8 <- rewet_flux_qpoints |>
   ggplot(aes(flux_obs, co2_flux, col=Season))+
   geom_abline(intercept = 0, slope=1, linetype=3)+
   geom_point()+
+  #geom_text(aes(label=site))+
   xlim(0, 450)+
   ylim(0, 450)+
   xlab(expression("Observed CO"[2]*" flux (mmol m"^{-2}~d^{-1}*")"))+
