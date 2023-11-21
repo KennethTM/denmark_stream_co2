@@ -1,6 +1,22 @@
 source("libs_and_funcs.R")
 
-#Figures for manuscript
+#Figures and tables for manuscript
+
+#Table 1
+#Summary statistics of estimated fluxes
+q_points_flux <- read_parquet("data/q_points_flux.parquet")
+
+flux_summary <- q_points_flux |> 
+  group_by(season) |> 
+  summarise(q025 = quantile(co2_flux, probs = 0.025, na.rm=TRUE),
+            median = median(co2_flux, na.rm = TRUE),
+            q975 = quantile(co2_flux, probs = 0.975, na.rm=TRUE),
+            mean = mean(co2_flux, na.rm = TRUE))
+
+flux_summary |> 
+  mutate_if(is.numeric, ~round(., digits = 0)) |> 
+  mutate(season=str_to_title(season)) |> 
+  write_csv("figures/table_1.csv")
 
 #Figure 1
 q_points_modeling <- read_parquet("data/q_points_modeling.parquet")
@@ -76,11 +92,11 @@ fig_3 <- ggplot()+
   geom_sf(data=dk_border, fill=NA, col="black") +
   geom_sf(data=q_points_predictions_filter, aes(col=co2_pred), size=0.3, stroke=0)+
   facet_wrap(.~Season)+
-  scale_color_viridis_c(name = expression(Predicted~CO[2]~"(µM)"), trans="log10", breaks=c(100, 250, 500),
-                        option="cividis", direction=-1)+
+  scale_color_viridis_b(name = expression(Predicted~CO[2]~"(µM)"), limits=c(0, 600),
+                        option="cividis", direction=-1, breaks = c(0, 100, 150, 200, 600))+
   theme(strip.background = element_blank(), legend.position = "bottom",
         axis.text = element_blank(), axis.ticks = element_blank())+
-  guides(color=guide_colorbar(title.position = "top", ticks = FALSE, barwidth = 12))
+  guides(color=guide_colorsteps(even.steps=TRUE, show.limits = TRUE, title.position = "top", ticks = FALSE, barwidth = 12))
 
 fig_3
 
@@ -117,28 +133,6 @@ fig_4
 ggsave("figures/figure_4.png", fig_4, width = 174, height = 120, units = "mm")
 
 #Figure 5
-#Density plots of estimated fluxes
-q_points_flux <- read_parquet("data/q_points_flux.parquet")
-
-fig_5 <- q_points_flux |> 
-  mutate(Season = str_to_title(season),
-         Season = factor(Season, levels=c("Spring", "Summer", "Autumn", "Winter"))) |> 
-  ggplot(aes(co2_flux, fill=Season, col=Season))+
-  geom_density(alpha=0.5)+
-  ylab("Density")+
-  xlab(expression("CO"[2]*" flux (mmol m"^{-2}~d^{-1}*")"))+
-  scale_fill_viridis_d(direction=-1)+
-  scale_color_viridis_d(direction=-1)+
-  coord_cartesian(xlim=c(0, 1000))+
-  scale_y_continuous(expand = expand_scale(mult=c(0, 0.1)))+
-  theme(legend.position = "bottom")+
-  guides(fill=guide_legend(title.position = "top"))
-
-fig_5
-
-ggsave("figures/figure_5.png", fig_5, width = 129, height = 100, units = "mm")
-
-#Figure 6
 #Country map with estimated fluxes
 q_points_flux <- read_parquet("data/q_points_flux.parquet")
 dk_border <- st_read("data/dk_border.sqlite")
@@ -147,56 +141,80 @@ q_points_flux_sf <- q_points_flux |>
   select(q_point_x, q_point_y, season, co2_flux) |> 
   st_as_sf(coords=c("q_point_x", "q_point_y"), crs=dk_epsg) |> 
   mutate(Season = str_to_title(season),
-         Season = factor(Season, levels=c("Spring", "Summer", "Autumn", "Winter"))) |> 
-  filter(between(co2_flux, 0, 1000))
+         Season = factor(Season, levels=c("Spring", "Summer", "Autumn", "Winter")))
 
-fig_6 <- ggplot()+
+fig_5 <- ggplot()+
   geom_sf(data=dk_border, fill=NA, col="black") +
   geom_sf(data=q_points_flux_sf, aes(col=co2_flux), size=0.3, stroke=0)+
   facet_wrap(.~Season)+
-  scale_color_viridis_c(name = expression("CO"[2]*" flux (mmol m"^{-2}~d^{-1}*")"), direction=-1)+
+  scale_color_viridis_b(name = expression("CO"[2]*" flux (mmol m"^{-2}~d^{-1}*")"), 
+                        breaks = c(0, 200, 300, 400, 600, 10000),
+                        labels=c("", "<200", "300", "400", ">600", ""),
+                        limits=c(0, 10000),
+                        direction=-1)+
   theme(strip.background = element_blank(), legend.position = "bottom",
         axis.text = element_blank(), axis.ticks = element_blank())+
-  guides(color=guide_colorbar(title.position = "top", ticks = FALSE, barwidth = 12))
+  guides(color=guide_colorsteps(even.steps=TRUE, title.position = "top", ticks = FALSE, barwidth = 12))
 
-fig_6
+fig_5
 
-ggsave("figures/figure_6.png", fig_6, width = 174, height = 174, units = "mm")
+ggsave("figures/figure_5.png", fig_5, width = 174, height = 174, units = "mm")
 
-#Figure 7
+#Figure 6
 #Figure summer CO2 concentration and flux with zoom
-#TODO
 dk_lakes <- st_read(dk_lakes_path) |> 
   select(gml_id) |> 
   st_transform(dk_epsg)
 
 network <- st_read("data/dk_model/dk_model_hip_2020.shp")
 
-zoom_bbox <- st_bbox(c(xmin = 699100, ymin = 6211500-10000, xmax = 699100+10000, ymax = 6211500), crs=dk_epsg)
+zoom_bbox <- st_bbox(c(xmin = 704000, ymin = 6191045-5000, xmax = 704000+20000, ymax = 6191045), crs=dk_epsg)
 
 network_sub <- network |> 
   st_crop(zoom_bbox)
 
 lakes_sub <- dk_lakes |> 
   st_crop(zoom_bbox) |> 
-  mutate(area=as.numeric(st_area(geometry)))
+  mutate(area=as.numeric(st_area(geometry))) |> 
+  filter(area > 10^4)
 
 flux_sub <- q_points_flux_sf |> 
   filter(Season == "Summer") |> 
-  st_crop(zoom_bbox)
+  st_crop(zoom_bbox) |> 
+  filter(co2_flux < 500)
 
 conc_sub <- q_points_predictions_filter |> 
   filter(Season == "Summer") |> 
   st_crop(zoom_bbox)
 
-fig_conc
-ggplot()+
+fig_6_a <- ggplot()+
   geom_sf(data=network_sub, col="dodgerblue")+
-  geom_sf(data=lakes_sub |> filter(area > 10^5), col="dodgerblue")+
-  geom_sf(data = conc_sub, aes(col=co2_pred))+
-  scale_color_viridis_c(name = expression(Predicted~CO[2]~"(µM)"))
+  geom_sf(data=lakes_sub , col="dodgerblue")+
+  geom_sf(data=conc_sub, aes(col=co2_pred), size=1.5, stroke=0)+
+  scale_color_viridis_c(name = expression(Predicted~CO[2]~"(µM)"), option="cividis", direction=-1)+
+  theme(legend.position = "bottom")+
+  guides(color=guide_colorbar(ticks = FALSE, title.position = "top"))+
+  scale_y_continuous(expand = expansion(mult=0))+
+  scale_x_continuous(expand = expansion(mult=0))
 
-#Figure 8
+fig_6_b <- ggplot()+
+  geom_sf(data=network_sub, col="dodgerblue")+
+  geom_sf(data=lakes_sub, col="dodgerblue")+
+  geom_sf(data=flux_sub, aes(col=co2_flux), size=1.5, stroke=0)+
+  scale_color_viridis_c(name = expression("CO"[2]*" flux (mmol m"^{-2}~d^{-1}*")"), direction=-1)+
+  theme(legend.position = "bottom")+
+  guides(color=guide_colorbar(ticks = FALSE, title.position = "top"))+
+  scale_y_continuous(expand = expansion(mult=0))+
+  scale_x_continuous(expand = expansion(mult=0))
+
+fig_6 <- fig_6_a + fig_6_b + plot_layout(ncol=1, guides="collect") + plot_annotation(tag_levels = "A") &
+  theme(legend.position='bottom')
+
+fig_6
+
+ggsave("figures/figure_6.png", fig_6, width = 129, height = 110, units = "mm")
+
+#Figure 7
 #Compare estimated vs observed fluxes
 #TODO get full dataset and calc co2 concentrations and k600
 #TODO add plot with predicted and estimated co2 concentrations and k600
@@ -214,19 +232,24 @@ ggplot()+
 q_points_flux <- read_parquet("data/q_points_flux.parquet")
 rewet_flux <- read_excel("data/co2_rewet_sites_qpoints.xlsx")
 
-#rewet flux in umol/m2/s
+#rewet flux is unit umol/m2/s
 rewet_flux_qpoints <- rewet_flux |> 
   mutate(datetime = ymd_hms(datetime_0),
-         date=as_date(datetime),
+         date = as_date(datetime),
          month = month(date),
-         flux_obs = mean_flux*60*60*24*10^-3) |> 
+         co2_flux_obs = mean_flux*60*60*24*10^-3) |> #umol/m2/sec to mmol/m2/d
   left_join(season_map) |>
-  left_join(q_points_flux, by=c("index", "season")) |> 
+  left_join(q_points_flux[,c("index", "season", "co2_flux", "co2_pred", "kgas")], by=c("index", "season")) |> 
   mutate(Season = str_to_title(season),
-         Season = factor(Season, levels=c("Spring", "Summer", "Autumn", "Winter"))) 
+         Season = factor(Season, levels=c("Spring", "Summer", "Autumn", "Winter"))) |> 
+  mutate(aquaenv = pmap(list(temp, ph, alk), ~aquaenv(S=0, t=..1, SumCO2 = NULL, pH = ..2, TA = ..3/1000)),
+         co2_obs = map_dbl(aquaenv, ~ .$CO2)*10^6, 
+         co2_obs_sat = map_dbl(aquaenv, ~ .$CO2_sat)*10^6,
+         kgas_obs = co2_flux_obs/(co2_obs-co2_obs_sat)) |> 
+  select(-aquaenv)
 
-fig_8 <- rewet_flux_qpoints |> 
-  ggplot(aes(flux_obs, co2_flux, col=Season))+
+fig_7_a <- rewet_flux_qpoints |> 
+  ggplot(aes(co2_flux_obs, co2_flux, col=Season))+
   geom_abline(intercept = 0, slope=1, linetype=3)+
   geom_point()+
   #geom_text(aes(label=site))+
@@ -238,9 +261,38 @@ fig_8 <- rewet_flux_qpoints |>
   scale_color_viridis_d(direction=-1)+
   guides(color=guide_legend(title.position = "top"))
 
-fig_8
+fig_7_b <- rewet_flux_qpoints |> 
+  ggplot(aes(co2_obs, co2_pred, col=Season))+
+  geom_abline(intercept = 0, slope=1, linetype=3)+
+  geom_point()+
+  xlim(0, 400)+
+  ylim(0, 400)+
+  xlab(expression(Observed~CO[2]~"(µM)"))+
+  ylab(expression(Predicted~CO[2]~"(µM)"))+
+  theme(legend.position = "bottom")+
+  scale_color_viridis_d(direction=-1)+
+  guides(color=guide_legend(title.position = "top"))+
+  coord_equal()
 
-ggsave("figures/figure_8.png", fig_8, width = 84, height = 100, units = "mm")
+fig_7_c <- rewet_flux_qpoints |> 
+  ggplot(aes(kgas_obs, kgas, col=Season))+
+  geom_abline(intercept = 0, slope=1, linetype=3)+
+  geom_point()+
+  xlim(0, 55)+
+  ylim(0, 55)+
+  xlab(expression("Observed k (m"~d^{-1}*")"))+
+  ylab(expression("Estimated k (m"~d^{-1}*")"))+
+  theme(legend.position = "bottom")+
+  scale_color_viridis_d(direction=-1)+
+  guides(color=guide_legend(title.position = "top"))+
+  coord_equal()
+
+fig_7 <- fig_7_a / (fig_7_b + fig_7_c) + plot_layout(guides="collect") + plot_annotation(tag_levels = "A") &
+  theme(legend.position='bottom')
+
+fig_7
+
+ggsave("figures/figure_7.png", fig_7, width = 129, height = 160, units = "mm")
 
 #Tables and figures for supplementary material
 
@@ -262,8 +314,8 @@ table_s2 <- benchmark |>
             mae = mean(test_neg_mean_absolute_error*-1),
             mape = mean(test_neg_mean_absolute_percentage_error*-1),
             r2_label = metric_to_label(test_r2), 
-            rmse_label = metric_to_label(test_neg_root_mean_squared_error*-1),
-            mae_label = metric_to_label(test_neg_mean_absolute_error*-1),
+            rmse_label = metric_to_label(test_neg_root_mean_squared_error*-1, digits=1),
+            mae_label = metric_to_label(test_neg_mean_absolute_error*-1, digits=1),
             mape_label = metric_to_label(test_neg_mean_absolute_percentage_error*-1)) |> 
   arrange(desc(r2)) 
 
