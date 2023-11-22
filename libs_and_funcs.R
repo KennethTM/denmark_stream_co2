@@ -91,3 +91,39 @@ width_from_area <- function(region, area){
   region_relationships[[region]](area)
 }
 
+#variable name map
+var_name_map <- list("site_elev" = "Site elevation", 
+                    "discharge_specific" = "Specific discharge", 
+                    "overland" = "Overland flow", 
+                    "overland_drain" = "Overland drain flow", 
+                    "sz" = "Groundwater flow", 
+                    "sz_drain" = "Groundwater drain flow", 
+                    "airt" = "Air temperature", 
+                    "precip" = "Precipitation", 
+                    "catchment_area" = "Catchment area", 
+                    "mean.phraetic" = "Phraetic", 
+                    "mean.dhym" = "Elevation", 
+                    "mean.dhym_slope" = "Slope", 
+                    "mean.dhym_hand" = "HAND", 
+                    "mean.clay_a" = "Clay A", 
+                    "mean.clay_b" = "Clay B", 
+                    "mean.clay_c" = "Clay C", 
+                    "mean.clay_d" = "Clay D", 
+                    "mean.artificial" = "Artifical", 
+                    "mean.agriculture" = "Agriculture", 
+                    "mean.forest" = "Forest", 
+                    "mean.nature_eks_agriculture" = "Nature/agriculture", 
+                    "mean.stream" = "Stream", 
+                    "mean.lake" = "Lake", 
+                    "mean.artificial_200m" = "Artifical (200 m)", 
+                    "mean.agriculture_200m" = "Agriculture (200 m)", 
+                    "mean.forest_200m" = "Forest (200 m)", 
+                    "mean.nature_eks_agriculture_200m" = "Nature/agriculture (200 m)", 
+                    "mean.stream_200m" = "Stream (200 m)", 
+                    "mean.lake_200m" = "Lake (200 m)", 
+                    "autumn" = "Autumn", 
+                    "spring" = "Spring", 
+                    "summer" = "Summer", 
+                    "winter" = "Winter")
+
+

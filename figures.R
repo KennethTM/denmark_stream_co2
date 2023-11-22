@@ -67,8 +67,8 @@ fig_2 <- test_obs_pred |>
   geom_point(shape = 1, alpha=0.5)+
   ylab(expression(Predicted~CO[2]~"(µM)"))+
   xlab(expression(Observed~CO[2]~"(µM)"))+
-  xlim(0, 850)+
-  ylim(0, 850)
+  scale_x_log10(limits=c(25, 850))+
+  scale_y_log10(limits=c(25, 850))
 
 fig_2_marg <- ggMarginal(fig_2, type="density")
 
@@ -107,8 +107,8 @@ importance <- read_csv("data/modeling/variable_importance.csv")
 pdp <- read_csv("data/modeling/partial_dependence.csv")
 
 fig_4_a <- importance |> 
-  mutate(variable = sub("mean.", "", variable)) |> 
-  ggplot(aes(x=reorder(variable, importance_mean), 
+  mutate(var_name = unlist(var_name_map[variable])) |> 
+  ggplot(aes(x=reorder(var_name, importance_mean), 
              y=importance_mean, 
              ymin=importance_mean-importance_std, ymax=importance_mean+importance_std))+
   geom_pointrange(size=0.1)+
@@ -117,11 +117,11 @@ fig_4_a <- importance |>
   xlab("Variable")
 
 fig_4_b <- pdp |> 
-  mutate(variable = sub("mean.", "", variable),
-         variable = factor(variable, levels = c('dhym_slope', 'dhym_hand', 'airt', 'phraetic'))) |> 
+  mutate(var_name = unlist(var_name_map[variable]),
+         var_name = factor(var_name, levels = c("Slope", "HAND", "Air temperature", "Phraetic"))) |> 
   ggplot(aes(x, response))+
   geom_line()+
-  facet_wrap(~variable, ncol=2, scales="free_x")+
+  facet_wrap(~var_name, ncol=2, scales="free_x")+
   theme(strip.background = element_blank())+
   xlab(NULL)+
   ylab(expression(CO[2]~"(µM)"))
@@ -188,8 +188,8 @@ conc_sub <- q_points_predictions_filter |>
   st_crop(zoom_bbox)
 
 fig_6_a <- ggplot()+
-  geom_sf(data=network_sub, col="dodgerblue")+
-  geom_sf(data=lakes_sub , col="dodgerblue")+
+  geom_sf(data=network_sub, col="lightblue")+
+  geom_sf(data=lakes_sub , col="lightblue", fill="lightblue")+
   geom_sf(data=conc_sub, aes(col=co2_pred), size=1.5, stroke=0)+
   scale_color_viridis_c(name = expression(Predicted~CO[2]~"(µM)"), option="cividis", direction=-1)+
   theme(legend.position = "bottom")+
@@ -198,8 +198,8 @@ fig_6_a <- ggplot()+
   scale_x_continuous(expand = expansion(mult=0))
 
 fig_6_b <- ggplot()+
-  geom_sf(data=network_sub, col="dodgerblue")+
-  geom_sf(data=lakes_sub, col="dodgerblue")+
+  geom_sf(data=network_sub, col="lightblue")+
+  geom_sf(data=lakes_sub, col="lightblue", fill="lightblue")+
   geom_sf(data=flux_sub, aes(col=co2_flux), size=1.5, stroke=0)+
   scale_color_viridis_c(name = expression("CO"[2]*" flux (mmol m"^{-2}~d^{-1}*")"), direction=-1)+
   theme(legend.position = "bottom")+
@@ -208,16 +208,15 @@ fig_6_b <- ggplot()+
   scale_x_continuous(expand = expansion(mult=0))
 
 fig_6 <- fig_6_a + fig_6_b + plot_layout(ncol=1, guides="collect") + plot_annotation(tag_levels = "A") &
-  theme(legend.position='bottom')
+  theme(legend.position='bottom', axis.text = element_blank(), axis.ticks = element_blank())
 
 fig_6
 
-ggsave("figures/figure_6.png", fig_6, width = 129, height = 110, units = "mm")
+ggsave("figures/figure_6.png", fig_6, width = 174, height = 130, units = "mm")
 
 #Figure 7
 #Compare estimated vs observed fluxes
 #TODO get full dataset and calc co2 concentrations and k600
-#TODO add plot with predicted and estimated co2 concentrations and k600
 
 # #Write shapefile with coords and create new column with nearest qpoint
 # rewet_flux <- read_excel("data/co2_rewet_sites.xlsx")
@@ -366,9 +365,9 @@ ggsave("figures/figure_s2.png", fig_learning, width = 129, height = 84, units = 
 q_points_modeling <- read_parquet("data/q_points_modeling.parquet")
 
 numeric_preds <- c("site_elev",
-                 "discharge", "discharge_specific", "overland", "overland_drain", "sz", "sz_drain",
+                   "discharge_specific", "overland", "overland_drain", "sz", "sz_drain",
                  "airt", "precip",
-                 "catchment_area", "mean.phraetic", "mean.chalk",  "mean.dhym",
+                 "catchment_area", "mean.phraetic",  "mean.dhym",
                  "mean.dhym_slope", "mean.dhym_hand", "mean.clay_a",  "mean.clay_b",
                  "mean.clay_c",  "mean.clay_d",  "mean.artificial", "mean.agriculture",
                  "mean.forest" , "mean.nature_eks_agriculture", "mean.stream",  
@@ -380,10 +379,10 @@ cor_matrix <- q_points_modeling |>
   select(all_of(numeric_preds)) |> 
   cor(use = "complete.obs")
 
-cor_matrix[upper.tri(cor_matrix)] <- NA
+colnames(cor_matrix) <- as.character(var_name_map[colnames(cor_matrix)])
+rownames(cor_matrix) <- as.character(var_name_map[rownames(cor_matrix)])
 
-colnames(cor_matrix) <- sub("mean.", "", colnames(cor_matrix))
-rownames(cor_matrix) <- sub("mean.", "", rownames(cor_matrix))
+cor_matrix[upper.tri(cor_matrix)] <- NA
 
 cor_df <- reshape2::melt(cor_matrix) |> 
   na.omit()
