@@ -23,6 +23,19 @@ q_points_modeling <- read_parquet("data/q_points_modeling.parquet")
 dk_border <- st_read("data/dk_border.sqlite")
 network <- st_read("data/dk_model/dk_model_hip_2020.shp")
 
+world_map <- getMap(resolution = "high") |> 
+  st_as_sf() |> 
+  st_transform(dk_epsg)
+
+roi <- st_as_sfc(st_bbox(st_buffer(dk_border, 20000)))
+
+countries <- st_intersection(roi, world_map) |> 
+  st_cast("MULTIPOLYGON") |> 
+  st_as_sf() |> 
+  mutate(id = 1:n()) |> 
+  filter(id != 3) |> 
+  mutate(fill = ifelse(id == 2, "dk", "not_dk"))
+
 ice_line <- st_read("data/iceage/Isrand_poly.shp") |> 
   slice(1) |> 
   st_transform(dk_epsg) |>
@@ -37,10 +50,12 @@ q_points_sf <- q_points_modeling |>
   slice(1)
 
 fig_1_a <- ggplot()+
-  geom_sf(data=dk_border, fill=NA, col="black") +
+  geom_sf(data=countries, aes(fill=fill), show.legend = FALSE, col="black") +
+  scale_fill_manual(values=c("white", "grey"))+
   geom_sf(data=network, col="dodgerblue", linewidth=0.25) +
   geom_sf(data=ice_line, col= "coral") +
-  geom_sf(data=q_points_sf, shape=1, size=1)
+  geom_sf(data=q_points_sf, shape=1, size=1)+
+  coord_sf(expand = FALSE)
 
 fig_1_b <- q_points_modeling |> 
   mutate(Season = str_to_title(season)) |> 
@@ -78,7 +93,6 @@ ggsave("figures/figure_2.png", fig_2_marg, width = 84, height = 84, units = "mm"
 
 #Figure 3
 q_points_predictions <- read_parquet("data/q_points_predictions.parquet")
-dk_border <- st_read("data/dk_border.sqlite")
 
 q_points_predictions_filter <- q_points_predictions |> 
   filter(snap_dist < 100,
@@ -89,14 +103,16 @@ q_points_predictions_filter <- q_points_predictions |>
          Season = factor(Season, levels=c("Spring", "Summer", "Autumn", "Winter")))
 
 fig_3 <- ggplot()+
-  geom_sf(data=dk_border, fill=NA, col="black") +
+  geom_sf(data=countries, aes(fill=fill), show.legend = FALSE, col="black") +
+  scale_fill_manual(values=c("white", "grey"))+
   geom_sf(data=q_points_predictions_filter, aes(col=co2_pred), size=0.3, stroke=0)+
   facet_wrap(.~Season)+
   scale_color_viridis_b(name = expression(Predicted~CO[2]~"(µM)"), limits=c(0, 600),
                         option="cividis", direction=-1, breaks = c(0, 100, 150, 200, 600))+
   theme(strip.background = element_blank(), legend.position = "bottom",
         axis.text = element_blank(), axis.ticks = element_blank())+
-  guides(color=guide_colorsteps(even.steps=TRUE, show.limits = TRUE, title.position = "top", ticks = FALSE, barwidth = 12))
+  guides(color=guide_colorsteps(even.steps=TRUE, show.limits = TRUE, title.position = "top", ticks = FALSE, barwidth = 12))+
+  coord_sf(expand = FALSE)
 
 fig_3
 
@@ -118,7 +134,7 @@ fig_4_a <- importance |>
 
 fig_4_b <- pdp |> 
   mutate(var_name = unlist(var_name_map[variable]),
-         var_name = factor(var_name, levels = c("Slope", "HAND", "Air temperature", "Phraetic"))) |> 
+         var_name = factor(var_name, levels = c("Slope", "HAND", "Air temperature", "Groundwater depth"))) |> 
   ggplot(aes(x, response))+
   geom_line()+
   facet_wrap(~var_name, ncol=2, scales="free_x")+
@@ -135,7 +151,6 @@ ggsave("figures/figure_4.png", fig_4, width = 174, height = 120, units = "mm")
 #Figure 5
 #Country map with estimated fluxes
 q_points_flux <- read_parquet("data/q_points_flux.parquet")
-dk_border <- st_read("data/dk_border.sqlite")
 
 q_points_flux_sf <- q_points_flux |> 
   select(q_point_x, q_point_y, season, co2_flux) |> 
@@ -144,7 +159,8 @@ q_points_flux_sf <- q_points_flux |>
          Season = factor(Season, levels=c("Spring", "Summer", "Autumn", "Winter")))
 
 fig_5 <- ggplot()+
-  geom_sf(data=dk_border, fill=NA, col="black") +
+  geom_sf(data=countries, aes(fill=fill), show.legend = FALSE, col="black") +
+  scale_fill_manual(values=c("white", "grey"))+
   geom_sf(data=q_points_flux_sf, aes(col=co2_flux), size=0.3, stroke=0)+
   facet_wrap(.~Season)+
   scale_color_viridis_b(name = expression("CO"[2]*" flux (mmol m"^{-2}~d^{-1}*")"), 
@@ -154,7 +170,8 @@ fig_5 <- ggplot()+
                         direction=-1)+
   theme(strip.background = element_blank(), legend.position = "bottom",
         axis.text = element_blank(), axis.ticks = element_blank())+
-  guides(color=guide_colorsteps(even.steps=TRUE, title.position = "top", ticks = FALSE, barwidth = 12))
+  guides(color=guide_colorsteps(even.steps=TRUE, title.position = "top", ticks = FALSE, barwidth = 12))+
+  coord_sf(expand = FALSE)
 
 fig_5
 
@@ -216,7 +233,6 @@ ggsave("figures/figure_6.png", fig_6, width = 174, height = 130, units = "mm")
 
 #Figure 7
 #Compare estimated vs observed fluxes
-#TODO get full dataset and calc co2 concentrations and k600
 
 # #Write shapefile with coords and create new column with nearest qpoint
 # rewet_flux <- read_excel("data/co2_rewet_sites.xlsx")
@@ -247,10 +263,16 @@ rewet_flux_qpoints <- rewet_flux |>
          kgas_obs = co2_flux_obs/(co2_obs-co2_obs_sat)) |> 
   select(-aquaenv)
 
+#flux_lm <- summary(lm(co2_flux~co2_flux_obs, data = rewet_flux_qpoints))
+#flux_lm_r2 <- round(flux_lm$r.squared, 2)
+#flux_lm_n <- sum(!is.na(rewet_flux_qpoints$co2_flux))
+
 fig_7_a <- rewet_flux_qpoints |> 
   ggplot(aes(co2_flux_obs, co2_flux, col=Season))+
   geom_abline(intercept = 0, slope=1, linetype=3)+
   geom_point()+
+  #annotate("text", x=400, y=450, label=expression(R^{2}~"= 0.02"), hjust=0)+
+  #annotate("text", x=400, y=400, label="n = 40", hjust=0)+
   #geom_text(aes(label=site))+
   xlim(0, 450)+
   ylim(0, 450)+
@@ -264,8 +286,8 @@ fig_7_b <- rewet_flux_qpoints |>
   ggplot(aes(co2_obs, co2_pred, col=Season))+
   geom_abline(intercept = 0, slope=1, linetype=3)+
   geom_point()+
-  xlim(0, 400)+
-  ylim(0, 400)+
+  xlim(0, 460)+
+  ylim(0, 460)+
   xlab(expression(Observed~CO[2]~"(µM)"))+
   ylab(expression(Predicted~CO[2]~"(µM)"))+
   theme(legend.position = "bottom")+

@@ -3,6 +3,7 @@ library(lubridate);library(patchwork);library(terra);library(lwgeom);
 library(exactextractr);library(nngeo);library(stars)
 library(foreign);library(gdalUtilities);library(whitebox)
 library(arrow);library(readxl);library(ggExtra)
+library(rworldmap)
 
 set.seed(9999)
 
@@ -101,7 +102,7 @@ var_name_map <- list("site_elev" = "Site elevation",
                     "airt" = "Air temperature", 
                     "precip" = "Precipitation", 
                     "catchment_area" = "Catchment area", 
-                    "mean.phraetic" = "Phraetic", 
+                    "mean.phraetic" = "Groundwater depth", 
                     "mean.dhym" = "Elevation", 
                     "mean.dhym_slope" = "Slope", 
                     "mean.dhym_hand" = "HAND", 
