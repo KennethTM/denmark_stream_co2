@@ -229,7 +229,8 @@ fig_6 <- fig_6_a + fig_6_b + plot_layout(ncol=1, guides="collect") + plot_annota
 
 fig_6
 
-ggsave("figures/figure_6.png", fig_6, width = 174, height = 130, units = "mm")
+#Add arrows manually
+ggsave("figures/figure_6.pdf", fig_6, width = 174, height = 130, units = "mm")
 
 #Figure 7
 #Compare estimated vs observed fluxes
