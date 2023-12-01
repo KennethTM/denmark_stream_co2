@@ -55,7 +55,7 @@ fig_1_a <- ggplot()+
   geom_sf(data=network, col="dodgerblue", linewidth=0.25) +
   geom_sf(data=ice_line, col= "coral") +
   geom_sf(data=q_points_sf, shape=1, size=1)+
-  coord_sf(expand = FALSE)
+  coord_sf(expand = FALSE, xlim=c(442897.0-20000, 892801.1+20000), ylim=c(6049775.1-20000, 6402206.9+20000))
 
 fig_1_b <- q_points_modeling |> 
   mutate(Season = str_to_title(season)) |> 
@@ -73,23 +73,29 @@ fig_1
 ggsave("figures/figure_1.png", fig_1, width = 129, height = 180, units = "mm")
 
 #Figure 2
-test_obs_pred <- read_csv("data/modeling/test_obs_pred.csv")
+test_obs_pred <- read_csv("data/modeling/test_obs_pred.csv") |> 
+  mutate(Season = str_to_title(season),
+         Season = factor(Season, levels=c("Spring", "Summer", "Autumn", "Winter")))
 summary(test_obs_pred)
 
 fig_2 <- test_obs_pred |> 
-  ggplot(aes(x=y_test, y=yhat_test))+
+  ggplot(aes(x=y_test, y=yhat_test, col=Season))+
   geom_abline(slope=1, intercept = 0, linetype=3)+
-  geom_point(shape = 1, alpha=0.5)+
+  geom_point()+
   ylab(expression(Predicted~CO[2]~"(µM)"))+
   xlab(expression(Observed~CO[2]~"(µM)"))+
   scale_x_log10(limits=c(25, 850))+
-  scale_y_log10(limits=c(25, 850))
+  scale_y_log10(limits=c(25, 850))+
+  scale_color_viridis_d(direction = -1)+
+  theme(legend.position = "bottom")+
+  guides(color=guide_legend(title.position = "top"))+
+  coord_equal()
 
 fig_2_marg <- ggMarginal(fig_2, type="density")
 
 fig_2_marg
 
-ggsave("figures/figure_2.png", fig_2_marg, width = 84, height = 84, units = "mm")
+ggsave("figures/figure_2.png", fig_2_marg, width = 129, height = 129, units = "mm")
 
 #Figure 3
 q_points_predictions <- read_parquet("data/q_points_predictions.parquet")
@@ -112,7 +118,7 @@ fig_3 <- ggplot()+
   theme(strip.background = element_blank(), legend.position = "bottom",
         axis.text = element_blank(), axis.ticks = element_blank())+
   guides(color=guide_colorsteps(even.steps=TRUE, show.limits = TRUE, title.position = "top", ticks = FALSE, barwidth = 12))+
-  coord_sf(expand = FALSE)
+  coord_sf(expand = FALSE, xlim=c(442897.0-20000, 892801.1+20000), ylim=c(6049775.1-20000, 6402206.9+20000))
 
 fig_3
 
@@ -171,7 +177,7 @@ fig_5 <- ggplot()+
   theme(strip.background = element_blank(), legend.position = "bottom",
         axis.text = element_blank(), axis.ticks = element_blank())+
   guides(color=guide_colorsteps(even.steps=TRUE, title.position = "top", ticks = FALSE, barwidth = 12))+
-  coord_sf(expand = FALSE)
+  coord_sf(expand = FALSE, xlim=c(442897.0-20000, 892801.1+20000), ylim=c(6049775.1-20000, 6402206.9+20000))
 
 fig_5
 
@@ -211,8 +217,8 @@ fig_6_a <- ggplot()+
   scale_color_viridis_c(name = expression(Predicted~CO[2]~"(µM)"), option="cividis", direction=-1)+
   theme(legend.position = "bottom")+
   guides(color=guide_colorbar(ticks = FALSE, title.position = "top"))+
-  scale_y_continuous(expand = expansion(mult=0))+
-  scale_x_continuous(expand = expansion(mult=0))
+  scale_y_continuous(expand = expansion(mult=0.1))+
+  scale_x_continuous(expand = expansion(mult=0.1/4))
 
 fig_6_b <- ggplot()+
   geom_sf(data=network_sub, col="lightblue")+
@@ -221,8 +227,8 @@ fig_6_b <- ggplot()+
   scale_color_viridis_c(name = expression("CO"[2]*" flux (mmol m"^{-2}~d^{-1}*")"), direction=-1)+
   theme(legend.position = "bottom")+
   guides(color=guide_colorbar(ticks = FALSE, title.position = "top"))+
-  scale_y_continuous(expand = expansion(mult=0))+
-  scale_x_continuous(expand = expansion(mult=0))
+  scale_y_continuous(expand = expansion(mult=0.1))+
+  scale_x_continuous(expand = expansion(mult=0.1/4))
 
 fig_6 <- fig_6_a + fig_6_b + plot_layout(ncol=1, guides="collect") + plot_annotation(tag_levels = "A") &
   theme(legend.position='bottom', axis.text = element_blank(), axis.ticks = element_blank())
@@ -231,6 +237,7 @@ fig_6
 
 #Add arrows manually
 ggsave("figures/figure_6.pdf", fig_6, width = 174, height = 130, units = "mm")
+ggsave("figures/figure_6.png", fig_6, width = 174, height = 130, units = "mm")
 
 #Figure 7
 #Compare estimated vs observed fluxes

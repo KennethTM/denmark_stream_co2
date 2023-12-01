@@ -180,7 +180,7 @@ with open('data/modeling/best_model.pkl','wb') as dst:
     pickle.dump(pipeline_wrap, dst)
 
 ##load
-#with open('data/best_model.pkl', 'rb') as src:
+#with open('data/modeling/best_model.pkl', 'rb') as src:
 #    pipeline_wrap = pickle.load(src)
 
 #Predict for test set
@@ -199,7 +199,8 @@ test_metrics = {'r2': r2, 'mae': mae, 'rmse': rmse, "mape": mape, "pearson": pea
 with open('data/modeling/test_metrics.json', 'w') as json_file:
   json.dump(test_metrics, json_file)
 
-obs_pred_df = pd.DataFrame({"y_test": y_test, "yhat_test": yhat_test})
+
+obs_pred_df = pd.DataFrame({"y_test": y_test, "yhat_test": yhat_test, "season": X_test[["autumn", "spring", "summer", "winter"]].idxmax(1)})
 obs_pred_df.to_csv("data/modeling/test_obs_pred.csv", index=False)
 
 #Predict for all qpoints
