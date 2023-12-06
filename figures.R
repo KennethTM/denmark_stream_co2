@@ -242,18 +242,8 @@ ggsave("figures/figure_6.png", fig_6, width = 174, height = 130, units = "mm")
 #Figure 7
 #Compare estimated vs observed fluxes
 
-# #Write shapefile with coords and create new column with nearest qpoint
-# rewet_flux <- read_excel("data/co2_rewet_sites.xlsx")
-# 
-# rewet_flux |>
-#   st_as_sf(coords = c("longitude", "latitude"), crs=4326) |>
-#   st_transform(dk_epsg) |>
-#   group_by(site) |>
-#   slice(1) |>
-#   st_write("data/rewet_sites.sqlite")
-
 q_points_flux <- read_parquet("data/q_points_flux.parquet")
-rewet_flux <- read_excel("data/co2_rewet_sites_qpoints.xlsx")
+insitu_flux <- #read_excel("data/insitu_flux_qpoints.xlsx")
 
 #rewet flux is unit umol/m2/s
 rewet_flux_qpoints <- rewet_flux |> 
