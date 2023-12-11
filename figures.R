@@ -243,10 +243,10 @@ ggsave("figures/figure_6.png", fig_6, width = 174, height = 130, units = "mm")
 #Compare estimated vs observed fluxes
 
 q_points_flux <- read_parquet("data/q_points_flux.parquet")
-insitu_flux <- #read_excel("data/insitu_flux_qpoints.xlsx")
+insitu_flux <- read_excel("data/insitu_flux/insitu_flux_qpoints.xlsx")
 
 #rewet flux is unit umol/m2/s
-rewet_flux_qpoints <- rewet_flux |> 
+insitu_flux_qpoints <- insitu_flux |> 
   mutate(datetime = ymd_hms(datetime_0),
          date = as_date(datetime),
          month = month(date),
@@ -261,11 +261,7 @@ rewet_flux_qpoints <- rewet_flux |>
          kgas_obs = co2_flux_obs/(co2_obs-co2_obs_sat)) |> 
   select(-aquaenv)
 
-#flux_lm <- summary(lm(co2_flux~co2_flux_obs, data = rewet_flux_qpoints))
-#flux_lm_r2 <- round(flux_lm$r.squared, 2)
-#flux_lm_n <- sum(!is.na(rewet_flux_qpoints$co2_flux))
-
-fig_7_a <- rewet_flux_qpoints |> 
+fig_7_a <- insitu_flux_qpoints |> 
   ggplot(aes(co2_flux_obs, co2_flux, col=Season))+
   geom_abline(intercept = 0, slope=1, linetype=3)+
   geom_point()+
@@ -280,7 +276,7 @@ fig_7_a <- rewet_flux_qpoints |>
   scale_color_viridis_d(direction=-1)+
   guides(color=guide_legend(title.position = "top"))
 
-fig_7_b <- rewet_flux_qpoints |> 
+fig_7_b <- insitu_flux_qpoints |> 
   ggplot(aes(co2_obs, co2_pred, col=Season))+
   geom_abline(intercept = 0, slope=1, linetype=3)+
   geom_point()+
@@ -293,7 +289,7 @@ fig_7_b <- rewet_flux_qpoints |>
   guides(color=guide_legend(title.position = "top"))+
   coord_equal()
 
-fig_7_c <- rewet_flux_qpoints |> 
+fig_7_c <- insitu_flux_qpoints |> 
   ggplot(aes(kgas_obs, kgas, col=Season))+
   geom_abline(intercept = 0, slope=1, linetype=3)+
   geom_point()+
@@ -311,12 +307,21 @@ fig_7 <- fig_7_a / (fig_7_b + fig_7_c) + plot_layout(guides="collect") + plot_an
 
 fig_7
 
-ggsave("figures/figure_7.png", fig_7, width = 129, height = 160, units = "mm")
+ggsave("figures/figure_7.png", fig_7, width = 129, height = 180, units = "mm")
 
 #Tables and figures for supplementary material
 
 #Table S1 
-#(prepared in manuscript)
+q_points_modeling <- read_parquet("data/q_points_modeling.parquet")
+
+numeric_preds_stats <- q_points_modeling |> 
+  select(all_of(numeric_preds)) |> 
+  gather(variable, value) |> 
+  group_by(variable) |> 
+  summarise(median=median(value), 
+            q_025 = quantile(value, 0.025),
+            q_975 = quantile(value, 0.975)) |> 
+  mutate(label = paste0(signif(median, digits=2), " (", signif(q_025, 2), "–", signif(q_975, 2), ")"))
 
 #Table S2
 #Benchmark of predictive models
@@ -383,17 +388,6 @@ ggsave("figures/figure_s2.png", fig_learning, width = 129, height = 84, units = 
 #Figure S3
 #Predictor varible inter-correlation
 q_points_modeling <- read_parquet("data/q_points_modeling.parquet")
-
-numeric_preds <- c("site_elev",
-                   "discharge_specific", "overland", "overland_drain", "sz", "sz_drain",
-                 "airt", "precip",
-                 "catchment_area", "mean.phraetic",  "mean.dhym",
-                 "mean.dhym_slope", "mean.dhym_hand", "mean.clay_a",  "mean.clay_b",
-                 "mean.clay_c",  "mean.clay_d",  "mean.artificial", "mean.agriculture",
-                 "mean.forest" , "mean.nature_eks_agriculture", "mean.stream",  
-                 "mean.lake", "mean.artificial_200m", "mean.agriculture_200m",
-                 "mean.forest_200m", "mean.nature_eks_agriculture_200m", 
-                 "mean.stream_200m", "mean.lake_200m")
 
 cor_matrix <- q_points_modeling |> 
   select(all_of(numeric_preds)) |> 

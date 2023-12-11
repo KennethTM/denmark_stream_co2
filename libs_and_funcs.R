@@ -95,10 +95,10 @@ width_from_area <- function(region, area){
 #variable name map
 var_name_map <- list("site_elev" = "Site elevation", 
                     "discharge_specific" = "Specific discharge", 
-                    "overland" = "Overland flow", 
-                    "overland_drain" = "Overland drain flow", 
-                    "sz" = "Groundwater flow", 
-                    "sz_drain" = "Groundwater drain flow", 
+                    "overland" = "OF", 
+                    "overland_drain" = "DPF", 
+                    "sz" = "GWF", 
+                    "sz_drain" = "DF", 
                     "airt" = "Air temperature", 
                     "precip" = "Precipitation", 
                     "catchment_area" = "Catchment area", 
@@ -127,4 +127,9 @@ var_name_map <- list("site_elev" = "Site elevation",
                     "summer" = "Summer", 
                     "winter" = "Winter")
 
-
+numeric_preds <- c("site_elev", "discharge_specific", "overland", "overland_drain", "sz", "sz_drain",
+                   "airt", "precip", "catchment_area",
+                   "mean.phraetic",  "mean.dhym", "mean.dhym_slope", "mean.dhym_hand", 
+                   "mean.clay_a",  "mean.clay_b", "mean.clay_c",  "mean.clay_d",  
+                   "mean.artificial", "mean.agriculture", "mean.forest" , "mean.nature_eks_agriculture", "mean.stream", "mean.lake", 
+                   "mean.artificial_200m", "mean.agriculture_200m", "mean.forest_200m", "mean.nature_eks_agriculture_200m", "mean.stream_200m", "mean.lake_200m")
