@@ -3,5 +3,9 @@
 papers/
 stream_data/
 rawdata/
-data/
+data/dem/
+data/stream_data/
+data/dk_model/
+data/features/
+data/iceage/
 old/

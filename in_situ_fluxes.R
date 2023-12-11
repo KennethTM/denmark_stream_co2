@@ -32,7 +32,8 @@ tude_flux_agg <- tude_flux |>
             long=mean(long)) |> 
   ungroup()
 
-write_csv(tude_flux_agg, "data/insitu_flux/tude_flux_agg.csv")
+tude_flux_agg |> 
+  write_delim("data/insitu_flux/tude_flux_agg.txt")
 
 tude_flux_agg |> 
   st_as_sf(coords = c("long", "lat"), crs=4326) |>
