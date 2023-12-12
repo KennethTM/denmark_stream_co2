@@ -348,6 +348,41 @@ table_s2|>
   write_csv("figures/table_s2.csv")
 
 #Figure S1
+#Hydrological flow components in summer and winter
+q_points_predictions <- read_parquet("data/q_points_predictions.parquet")
+
+q_points_flow <- q_points_predictions |> 
+  filter(snap_dist < 100,
+         in_lake == 0,
+         season %in% c("summer", "winter")) |> 
+  select(q_point_x, q_point_y, season, overland, overland_drain, sz, sz_drain) |> 
+  gather(variable, value, overland, overland_drain, sz, sz_drain) |> 
+  st_as_sf(coords=c("q_point_x", "q_point_y"), crs=dk_epsg) |> 
+  mutate(Season = str_to_title(season),
+         Season = factor(Season, levels=c("Spring", "Summer", "Autumn", "Winter")),
+         variable = as.character(var_name_map[variable]),
+         value = value*1000) |> 
+  na.omit() |> 
+  filter(value >= 0)
+
+fig_hydrocomps <- ggplot()+
+  geom_sf(data=countries, aes(fill=fill), show.legend = FALSE, col="black") +
+  scale_fill_manual(values=c("white", "grey"))+
+  geom_sf(data=q_points_flow, aes(col=value), size=0.3, stroke=0)+
+  facet_grid(variable~Season)+
+  scale_color_viridis_c(name = expression(Flow~"(l s"^{-1}*") - log"[10]*"(x+1) transformed"), 
+                        trans = "log1p", option = "mako", direction = -1,
+                        breaks = c(0, 10, 30, 100, 300))+
+  theme(strip.background = element_blank(), legend.position = "bottom",
+        axis.text = element_blank(), axis.ticks = element_blank())+
+  guides(color=guide_colorbar(title.position = "top", ticks = FALSE, barwidth = 12))+
+  coord_sf(expand = FALSE, xlim=c(442897.0-20000, 892801.1+20000), ylim=c(6049775.1-20000, 6402206.9+20000))
+
+fig_hydrocomps
+
+ggsave("figures/figure_s1.png", fig_hydrocomps, width = 174, height = 234, units = "mm")
+
+#Figure S2
 #water temperature vs air temperature for flux calculation
 q_points_modeling <- read_parquet("data/q_points_modeling.parquet")
 
@@ -367,9 +402,9 @@ fig_wtr_model <- wtr_data |>
 
 fig_wtr_model
 
-ggsave("figures/figure_s1.png", fig_wtr_model, width = 84, height = 84, units = "mm")
+ggsave("figures/figure_s2.png", fig_wtr_model, width = 84, height = 84, units = "mm")
 
-#Figure S2
+#Figure S3
 #Learning curve for random forest model
 learning_curve <- read_csv("data/modeling/learning_curve.csv")
 
@@ -383,9 +418,9 @@ fig_learning <- learning_curve |>
 
 fig_learning
 
-ggsave("figures/figure_s2.png", fig_learning, width = 129, height = 84, units = "mm")
+ggsave("figures/figure_s3.png", fig_learning, width = 129, height = 84, units = "mm")
 
-#Figure S3
+#Figure S4
 #Predictor varible inter-correlation
 q_points_modeling <- read_parquet("data/q_points_modeling.parquet")
 
@@ -413,4 +448,4 @@ fig_corr <- cor_df |>
 
 fig_corr
 
-ggsave("figures/figure_s3.png", fig_corr, width = 174, height = 174, units = "mm")
+ggsave("figures/figure_s4.png", fig_corr, width = 174, height = 174, units = "mm")
