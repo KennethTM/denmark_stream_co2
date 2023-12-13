@@ -113,11 +113,15 @@ fig_3 <- ggplot()+
   scale_fill_manual(values=c("white", "grey"))+
   geom_sf(data=q_points_predictions_filter, aes(col=co2_pred), size=0.3, stroke=0)+
   facet_wrap(.~Season)+
-  scale_color_viridis_b(name = expression(Predicted~CO[2]~"(µM)"), limits=c(0, 600),
-                        option="cividis", direction=-1, breaks = c(0, 100, 150, 200, 600))+
+  scale_color_viridis_b(name = expression(Predicted~CO[2]~"(µM)"), 
+                        limits=c(0, 600),
+                        option="cividis", 
+                        direction=-1, 
+                        breaks = c(0, 100, 200, 300, 600),
+                        labels=c("", "<100", "200", ">300", ""))+
   theme(strip.background = element_blank(), legend.position = "bottom",
         axis.text = element_blank(), axis.ticks = element_blank())+
-  guides(color=guide_colorsteps(even.steps=TRUE, show.limits = TRUE, title.position = "top", ticks = FALSE, barwidth = 12))+
+  guides(color=guide_colorsteps(even.steps=TRUE, show.limits = FALSE, title.position = "top", ticks = FALSE, barwidth = 12))+
   coord_sf(expand = FALSE, xlim=c(442897.0-20000, 892801.1+20000), ylim=c(6049775.1-20000, 6402206.9+20000))
 
 fig_3
@@ -170,8 +174,8 @@ fig_5 <- ggplot()+
   geom_sf(data=q_points_flux_sf, aes(col=co2_flux), size=0.3, stroke=0)+
   facet_wrap(.~Season)+
   scale_color_viridis_b(name = expression("CO"[2]*" flux (mmol m"^{-2}~d^{-1}*")"), 
-                        breaks = c(0, 200, 300, 400, 600, 10000),
-                        labels=c("", "<200", "300", "400", ">600", ""),
+                        breaks = c(0, 200, 300, 400, 500, 10000),
+                        labels=c("", "<200", "300", "400", ">500", ""),
                         limits=c(0, 10000),
                         direction=-1)+
   theme(strip.background = element_blank(), legend.position = "bottom",
