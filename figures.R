@@ -78,6 +78,13 @@ test_obs_pred <- read_csv("data/modeling/test_obs_pred.csv") |>
          Season = factor(Season, levels=c("Spring", "Summer", "Autumn", "Winter")))
 summary(test_obs_pred)
 
+test_metrics <- jsonlite::fromJSON("data/modeling/test_metrics.json")
+test_metrics_label <- paste0("R² = ", round(test_metrics$r2, digits = 2), "\n", 
+                             "⍴ = ", round(test_metrics$pearson, digits = 2), "\n",
+                             "MAE = ", round(test_metrics$mae, digits = 1), " µM\n",
+                             "RMSE = ", round(test_metrics$rmse, digits = 1), " µM\n",
+                             "MAPE = ", round(test_metrics$mape*100, digits = 0), "%")
+
 fig_2 <- test_obs_pred |> 
   ggplot(aes(x=y_test, y=yhat_test, col=Season))+
   geom_abline(slope=1, intercept = 0, linetype=3)+
@@ -88,6 +95,7 @@ fig_2 <- test_obs_pred |>
   scale_y_log10(limits=c(25, 850))+
   scale_color_viridis_d(direction = -1)+
   theme(legend.position = "bottom")+
+  annotate("text", x=300, y=40, label=test_metrics_label, hjust=0, size=3)+
   guides(color=guide_legend(title.position = "top"))+
   coord_equal()
 
