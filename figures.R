@@ -137,7 +137,7 @@ fig_3 <- ggplot()+
 fig_3
 
 ggsave("figures/figure_3.png", fig_3, width = 174, height = 174, units = "mm")
-ggsave("figures/figure_3.pdf", fig_3, width = 174, height = 174, units = "mm")
+ggsave("figures/figure_3.tif", fig_3, width = 174, height = 174, units = "mm", dpi = 300)
 
 #Figure 4
 importance <- read_csv("data/modeling/variable_importance.csv")
@@ -198,7 +198,7 @@ fig_5 <- ggplot()+
 fig_5
 
 ggsave("figures/figure_5.png", fig_5, width = 174, height = 174, units = "mm")
-ggsave("figures/figure_5.pdf", fig_5, width = 174, height = 174, units = "mm")
+ggsave("figures/figure_5.tif", fig_5, width = 174, height = 174, units = "mm", dpi=300)
 
 #Figure 6
 #Figure summer CO2 concentration and flux with zoom
