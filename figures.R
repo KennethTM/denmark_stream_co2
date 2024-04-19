@@ -71,6 +71,7 @@ fig_1 <- fig_1_a + fig_1_b + plot_layout(ncol=1) + plot_annotation(tag_levels = 
 fig_1
 
 ggsave("figures/figure_1.png", fig_1, width = 129, height = 180, units = "mm")
+ggsave("figures/figure_1.pdf", fig_1, width = 129, height = 180, units = "mm")
 
 #Figure 2
 test_obs_pred <- read_csv("data/modeling/test_obs_pred.csv") |> 
@@ -79,10 +80,10 @@ test_obs_pred <- read_csv("data/modeling/test_obs_pred.csv") |>
 summary(test_obs_pred)
 
 test_metrics <- jsonlite::fromJSON("data/modeling/test_metrics.json")
-test_metrics_label <- paste0("R² = ", round(test_metrics$r2, digits = 2), "\n", 
-                             "⍴ = ", round(test_metrics$pearson, digits = 2), "\n",
-                             "MAE = ", round(test_metrics$mae, digits = 1), " µM\n",
-                             "RMSE = ", round(test_metrics$rmse, digits = 1), " µM\n",
+test_metrics_label <- paste0("R\u00B2 = ", round(test_metrics$r2, digits = 2), "\n", 
+                             "\u03C1 = ", round(test_metrics$pearson, digits = 2), "\n",
+                             "MAE = ", round(test_metrics$mae, digits = 1), " \u03BCM\n",
+                             "RMSE = ", round(test_metrics$rmse, digits = 1), " \u03BCM\n",
                              "MAPE = ", round(test_metrics$mape*100, digits = 0), "%")
 
 fig_2 <- test_obs_pred |> 
@@ -104,6 +105,7 @@ fig_2_marg <- ggMarginal(fig_2, type="density")
 fig_2_marg
 
 ggsave("figures/figure_2.png", fig_2_marg, width = 129, height = 129, units = "mm")
+ggsave("figures/figure_2.pdf", fig_2_marg, width = 129, height = 129, units = "mm", device=cairo_pdf)
 
 #Figure 3
 q_points_predictions <- read_parquet("data/q_points_predictions.parquet")
@@ -123,10 +125,10 @@ fig_3 <- ggplot()+
   facet_wrap(.~Season)+
   scale_color_viridis_b(name = expression(Predicted~CO[2]~"(µM)"), 
                         limits=c(0, 600),
-                        option="cividis", 
-                        direction=-1, 
-                        breaks = c(0, 100, 200, 300, 600),
-                        labels=c("", "<100", "200", ">300", ""))+
+                        option="turbo", 
+                        direction=1, 
+                        breaks = c(0, 75, 100, 125, 150, 175, 200, 600),
+                        labels=c("", "<75", "100", "125", "150", "175", ">200", ""))+
   theme(strip.background = element_blank(), legend.position = "bottom",
         axis.text = element_blank(), axis.ticks = element_blank())+
   guides(color=guide_colorsteps(even.steps=TRUE, show.limits = FALSE, title.position = "top", ticks = FALSE, barwidth = 12))+
@@ -135,6 +137,7 @@ fig_3 <- ggplot()+
 fig_3
 
 ggsave("figures/figure_3.png", fig_3, width = 174, height = 174, units = "mm")
+ggsave("figures/figure_3.pdf", fig_3, width = 174, height = 174, units = "mm")
 
 #Figure 4
 importance <- read_csv("data/modeling/variable_importance.csv")
@@ -165,6 +168,7 @@ fig_4 <- fig_4_a + fig_4_b + plot_layout(ncol=2, widths=c(1.5, 2)) + plot_annota
 fig_4
 
 ggsave("figures/figure_4.png", fig_4, width = 174, height = 120, units = "mm")
+ggsave("figures/figure_4.pdf", fig_4, width = 174, height = 120, units = "mm")
 
 #Figure 5
 #Country map with estimated fluxes
@@ -194,10 +198,11 @@ fig_5 <- ggplot()+
 fig_5
 
 ggsave("figures/figure_5.png", fig_5, width = 174, height = 174, units = "mm")
+ggsave("figures/figure_5.pdf", fig_5, width = 174, height = 174, units = "mm")
 
 #Figure 6
 #Figure summer CO2 concentration and flux with zoom
-dk_lakes <- st_read(dk_lakes_path) |> 
+dk_lakes <- st_read("data/lakes.sqlite") |> 
   select(gml_id) |> 
   st_transform(dk_epsg)
 
@@ -210,7 +215,7 @@ network_sub <- network |>
 
 lakes_sub <- dk_lakes |> 
   st_crop(zoom_bbox) |> 
-  mutate(area=as.numeric(st_area(geometry))) |> 
+  mutate(area=as.numeric(st_area(GEOMETRY))) |> 
   filter(area > 10^4)
 
 flux_sub <- q_points_flux_sf |> 
@@ -226,9 +231,9 @@ fig_6_a <- ggplot()+
   geom_sf(data=network_sub, col="lightblue")+
   geom_sf(data=lakes_sub , col="lightblue", fill="lightblue")+
   geom_sf(data=conc_sub, aes(col=co2_pred), size=1.5, stroke=0)+
-  scale_color_viridis_c(name = expression(Predicted~CO[2]~"(µM)"), option="cividis", direction=-1)+
+  scale_color_viridis_c(name = expression(Predicted~CO[2]~"(µM)"), option="turbo", direction=1)+
   theme(legend.position = "bottom")+
-  guides(color=guide_colorbar(ticks = FALSE, title.position = "top"))+
+  guides(color=guide_colorbar(ticks.colour = NA, title.position = "top"))+
   scale_y_continuous(expand = expansion(mult=0.1))+
   scale_x_continuous(expand = expansion(mult=0.1/4))
 
@@ -238,7 +243,7 @@ fig_6_b <- ggplot()+
   geom_sf(data=flux_sub, aes(col=co2_flux), size=1.5, stroke=0)+
   scale_color_viridis_c(name = expression("CO"[2]*" flux (mmol m"^{-2}~d^{-1}*")"), direction=-1)+
   theme(legend.position = "bottom")+
-  guides(color=guide_colorbar(ticks = FALSE, title.position = "top"))+
+  guides(color=guide_colorbar(ticks.colour = NA, title.position = "top"))+
   scale_y_continuous(expand = expansion(mult=0.1))+
   scale_x_continuous(expand = expansion(mult=0.1/4))
 
@@ -248,12 +253,10 @@ fig_6 <- fig_6_a + fig_6_b + plot_layout(ncol=1, guides="collect") + plot_annota
 fig_6
 
 #Add arrows manually
-ggsave("figures/figure_6.pdf", fig_6, width = 174, height = 130, units = "mm")
-ggsave("figures/figure_6.png", fig_6, width = 174, height = 130, units = "mm")
+ggsave("figures/figure_6_raw.pdf", fig_6, width = 174, height = 130, units = "mm")
 
 #Figure 7
 #Compare estimated vs observed fluxes
-
 q_points_flux <- read_parquet("data/q_points_flux.parquet")
 insitu_flux <- read_excel("data/insitu_flux/insitu_flux_qpoints.xlsx")
 
@@ -282,11 +285,12 @@ fig_7_a <- insitu_flux_qpoints |>
   #geom_text(aes(label=site))+
   xlim(0, 450)+
   ylim(0, 450)+
-  xlab(expression("Observed CO"[2]*" flux (mmol m"^{-2}~d^{-1}*")"))+
-  ylab(expression("Estimated CO"[2]*" flux (mmol m"^{-2}~d^{-1}*")"))+
-  theme(legend.position = "bottom")+
+  xlab(expression("Obs. CO"[2]*" flux (mmol m"^{-2}~d^{-1}*")"))+
+  ylab(expression("Est. CO"[2]*" flux (mmol m"^{-2}~d^{-1}*")"))+
+  theme(legend.position = "right")+
   scale_color_viridis_d(direction=-1)+
-  guides(color=guide_legend(title.position = "top"))
+  guides(color=guide_legend(title.position = "top"))+
+  coord_equal()
 
 fig_7_b <- insitu_flux_qpoints |> 
   ggplot(aes(co2_obs, co2_pred, col=Season))+
@@ -294,9 +298,9 @@ fig_7_b <- insitu_flux_qpoints |>
   geom_point()+
   xlim(0, 460)+
   ylim(0, 460)+
-  xlab(expression(Observed~CO[2]~"(µM)"))+
-  ylab(expression(Predicted~CO[2]~"(µM)"))+
-  theme(legend.position = "bottom")+
+  xlab(expression(Obs.~CO[2]~"(µM)"))+
+  ylab(expression(Pred.~CO[2]~"(µM)"))+
+  theme(legend.position = "right")+
   scale_color_viridis_d(direction=-1)+
   guides(color=guide_legend(title.position = "top"))+
   coord_equal()
@@ -305,21 +309,21 @@ fig_7_c <- insitu_flux_qpoints |>
   ggplot(aes(kgas_obs, kgas, col=Season))+
   geom_abline(intercept = 0, slope=1, linetype=3)+
   geom_point()+
-  xlim(0, 55)+
-  ylim(0, 55)+
-  xlab(expression("Observed k (m"~d^{-1}*")"))+
-  ylab(expression("Estimated k (m"~d^{-1}*")"))+
-  theme(legend.position = "bottom")+
+  scale_x_log10(limits=c(0.05, 55))+
+  scale_y_log10(limits=c(0.05, 55))+
+  xlab(expression("Obs. k (m"~d^{-1}*")"))+
+  ylab(expression("Est. k (m"~d^{-1}*")"))+
+  theme(legend.position = "right")+
   scale_color_viridis_d(direction=-1)+
   guides(color=guide_legend(title.position = "top"))+
   coord_equal()
 
-fig_7 <- fig_7_a / (fig_7_b + fig_7_c) + plot_layout(guides="collect") + plot_annotation(tag_levels = "A") &
-  theme(legend.position='bottom')
+fig_7 <- fig_7_a + fig_7_b + fig_7_c + plot_layout(guides="collect", nrow=3) + plot_annotation(tag_levels = "A")
 
 fig_7
 
 ggsave("figures/figure_7.png", fig_7, width = 129, height = 180, units = "mm")
+ggsave("figures/figure_7.pdf", fig_7, width = 129, height = 180, units = "mm")
 
 #Tables and figures for supplementary material
 

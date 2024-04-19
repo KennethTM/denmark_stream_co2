@@ -20,8 +20,6 @@ dk_epsg <- 25832
 mpi_settings <- "mpiexec -n 8 "
 taudem_path <- "/home/kenneth/TauDEM-more-mpi-deprecations/src/build/"
 
-dk_lakes_path <- "/media/kenneth/d6c13395-8492-49ee-9c0f-6a165e34c95c1/autoencoder-for-lake-bathymetry/rawdata/DK_StandingWater.gml"
-
 season_map <- data.frame(month = 1:12, 
                          season = c(rep("winter", 2),
                                     rep("spring", 3),

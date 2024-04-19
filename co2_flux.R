@@ -37,7 +37,7 @@ network <- st_read("data/dk_model/dk_model_hip_2020.shp")
 dk_border <- st_read("data/dk_border.sqlite")
 dk_area <- as.numeric(st_area(dk_border))
 
-dk_lakes <- st_read(dk_lakes_path) |> 
+dk_lakes <- st_read("data/lakes.sqlite") |> 
   select(gml_id) |> 
   st_transform(dk_epsg)
 

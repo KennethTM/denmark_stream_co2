@@ -39,7 +39,7 @@ gdalwarp(srcfile = "data/dem/dhym.vrt",
          wm = 8000)
 
 #Add lake attribute and site elevation
-dk_lakes <- st_read(dk_lakes_path) |> 
+dk_lakes <- st_read("data/lakes.sqlite") |> 
   select(gml_id) |> 
   st_transform(dk_epsg)
 
