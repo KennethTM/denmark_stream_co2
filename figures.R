@@ -335,7 +335,10 @@ numeric_preds_stats <- q_points_modeling |>
             q_975 = quantile(value, 0.975)) |> 
   mutate(label = paste0(signif(median, digits=2), " (", signif(q_025, 2), "–", signif(q_975, 2), ")"))
 
-#Table S2
+#Table S2 
+#(created in manuscript)
+
+#Table S3
 #Benchmark of predictive models
 benchmark <- read_csv("data/modeling/model_benchmark.csv")
 
@@ -343,7 +346,7 @@ metric_to_label <- function(values, digits = 2){
   paste0(round(mean(values), digits), " (±", round(sd(values), digits), ")")
 }
 
-table_s2 <- benchmark |> 
+table_s3 <- benchmark |> 
   group_by(name) |> 
   summarise(r2 = mean(test_r2),
             rmse = mean(test_neg_root_mean_squared_error*-1),
@@ -355,9 +358,9 @@ table_s2 <- benchmark |>
             mape_label = metric_to_label(test_neg_mean_absolute_percentage_error*-1)) |> 
   arrange(desc(r2)) 
 
-table_s2|> 
+table_s3|> 
   select(name, contains("_label"))  |> 
-  write_csv("figures/table_s2.csv")
+  write_csv("figures/table_s3.csv")
 
 #Figure S1
 #Hydrological flow components in summer and winter
