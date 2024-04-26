@@ -17,6 +17,10 @@ Kenneth Thorø Martinsen<sup>1</sup>, Kaj Sand-Jensen<sup>1*</sup>, Victor Bergm
 
 **GitHub repository** https://github.com/KennethTM/denmark_stream_co2
 
+**Preprint** https://doi.org/10.22541/essoar.170688964.41741855/v1
+
+**Zenodo archive** https://doi.org/10.5281/zenodo.11072444
+
 ## Contents
 
 The repository contains R and Python scripts for the analysis and figures.
