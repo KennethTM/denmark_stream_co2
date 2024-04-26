@@ -118,6 +118,13 @@ q_points_predictions_filter <- q_points_predictions |>
   mutate(Season = str_to_title(season),
          Season = factor(Season, levels=c("Spring", "Summer", "Autumn", "Winter")))
 
+#write data product to file
+#q_points_predictions_filter |> 
+#  select(-Season) |> 
+#  rename(`predicted_co2_umol_l-1` = co2_pred) |> 
+#  st_write("data/products/predicted_co2_concentrations.csv", 
+#           layer_options = "GEOMETRY=AS_XY", delete_dsn = TRUE)
+
 fig_3 <- ggplot()+
   geom_sf(data=countries, aes(fill=fill), show.legend = FALSE, col="black") +
   scale_fill_manual(values=c("white", "grey"))+
@@ -179,6 +186,13 @@ q_points_flux_sf <- q_points_flux |>
   st_as_sf(coords=c("q_point_x", "q_point_y"), crs=dk_epsg) |> 
   mutate(Season = str_to_title(season),
          Season = factor(Season, levels=c("Spring", "Summer", "Autumn", "Winter")))
+
+#write data product to file
+#q_points_flux_sf |> 
+#  select(-Season) |> 
+#  rename(`estimated_co2_flux_mmol_m-2_d-1` = co2_flux) |> 
+#  st_write("data/products/estimated_co2_fluxes.csv", 
+#           layer_options = "GEOMETRY=AS_XY", delete_dsn = TRUE)
 
 fig_5 <- ggplot()+
   geom_sf(data=countries, aes(fill=fill), show.legend = FALSE, col="black") +
