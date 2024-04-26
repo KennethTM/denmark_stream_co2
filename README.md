@@ -15,6 +15,8 @@ Kenneth Thorø Martinsen<sup>1</sup>, Kaj Sand-Jensen<sup>1*</sup>, Victor Bergm
 **Corresponding author**
 *Correspondence: ksandjensen@bio.ku.dk
 
+**GitHub repository** https://github.com/KennethTM/denmark_stream_co2
+
 ## Contents
 
 The repository contains R and Python scripts for the analysis and figures.
